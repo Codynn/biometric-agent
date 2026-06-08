@@ -1,0 +1,29 @@
+{
+  "agent": {
+    "name": "Betterschool Attendance Agent",
+    "adms_port": 5836,
+    "web_port": 5837
+  },
+  "erp": {
+    "name": "BetterSchool ERP",
+    "base_url": "http://localhost:7654",
+    "token": "bWFucGFuZQ==.0847305e2067c8b7c1feab3caf0fe83d3d4694c8",
+    "endpoints": {
+      "push_attendance": "/api/biometric/agent/attendance",
+      "pull_commands": "/api/biometric/agent/commands/pending",
+      "ack_command": "/api/biometric/agent/commands/{id}/ack",
+      "heartbeat": "/api/biometric/agent/heartbeat"
+    }
+  },
+  "sync": {
+    "auto_sync": true,
+    "interval_seconds": 60,
+    "batch_size": 100
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "agent.log",
+    "max_bytes": 5242880,
+    "backup_count": 3
+  }
+}

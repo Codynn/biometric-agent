@@ -1,3 +1,6 @@
-flask>=2.3
-requests>=2.31
 pyzk>=0.9
+requests>=2.28
+flask>=2.3
+# WebSocket client — only needed when sync_mode = "realtime"
+python-socketio[client]>=5.10
+eventlet>=0.35

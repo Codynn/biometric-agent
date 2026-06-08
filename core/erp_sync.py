@@ -171,7 +171,7 @@ def execute_commands(cfg: dict, commands: list) -> None:
 
 
 def _cmd_register_user(device: dict, payload: dict):
-    """Write user record then immediately trigger fingerprint enrollment."""
+    """Write user record on device. Enrollment is now triggered separately via WebSocket."""
     from core import sdk_device
     zk, conn = sdk_device._connect(device)
     try:
@@ -195,28 +195,6 @@ def _cmd_register_user(device: dict, payload: dict):
             card=int(payload.get("card", 0)),
         )
         db_log("INFO", f"[CMD] register_user user_id={payload.get('user_id')} on {device['name']}")
-
-        # Re-fetch uid if it was a new user (set_user with uid=None assigns one)
-        if uid is None:
-            try:
-                updated = conn.get_users()
-                for u in updated:
-                    if str(u.user_id) == str(payload.get("user_id")):
-                        uid = u.uid
-                        break
-            except Exception:
-                pass
-
-        if uid is not None:
-            try:
-                conn.enroll_user(uid=uid)
-                db_log("INFO", f"[CMD] enroll_user triggered uid={uid} on {device['name']} — person must press finger on device now")
-            except Exception as e:
-                # Enrollment trigger failing should not fail the whole command —
-                # user record is already written, enrollment can be retried manually
-                db_log("WARN", f"[CMD] enroll_user failed uid={uid} on {device['name']}: {e}")
-        else:
-            db_log("WARN", f"[CMD] Could not resolve uid after set_user for user_id={payload.get('user_id')} — skipping enroll")
 
     finally:
         conn.disconnect()

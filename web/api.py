@@ -56,8 +56,9 @@ def save_config():
         cfg["erp"]["token"] = data["erp_token"]
 
     # Sync settings
-    if "auto_sync" in data:
-        cfg["sync"]["auto_sync"] = bool(data["auto_sync"])
+    if "sync_mode" in data:
+        if data["sync_mode"] in ("manual", "timely", "realtime"):
+            cfg["sync"]["sync_mode"] = data["sync_mode"]
     if "interval_seconds" in data:
         cfg["sync"]["interval_seconds"] = int(data["interval_seconds"])
     if "batch_size" in data:
@@ -232,6 +233,66 @@ def get_logs():
 
 
 # ── Dashboard stats ───────────────────────────────────────
+
+# ── Sync mode ─────────────────────────────────────────────
+
+@api_bp.get("/sync/mode")
+def get_sync_mode():
+    cfg = _load_cfg()
+    return jsonify({
+        "sync_mode":        cfg["sync"].get("sync_mode", "timely"),
+        "interval_seconds": cfg["sync"].get("interval_seconds", 60),
+    })
+
+
+@api_bp.post("/sync/mode")
+def set_sync_mode():
+    data = request.json or {}
+    mode = data.get("sync_mode")
+    if mode not in ("manual", "timely", "realtime"):
+        return jsonify({"error": "sync_mode must be: manual | timely | realtime"}), 400
+    cfg = _load_cfg()
+    cfg["sync"]["sync_mode"] = mode
+    if "interval_seconds" in data:
+        cfg["sync"]["interval_seconds"] = int(data["interval_seconds"])
+    _save_cfg(cfg)
+    return jsonify({"ok": True, "sync_mode": mode})
+
+
+# ── Enrollment device settings ────────────────────────────
+
+@api_bp.get("/enrollment/devices")
+def get_enrollment_devices():
+    cfg = _load_cfg()
+    from core.database import get_devices
+    enrollment_ids = cfg.get("enrollment", {}).get("device_ids", [])
+    all_devices    = get_devices()
+    return jsonify({
+        "enrollment_device_ids": enrollment_ids,
+        "devices": all_devices,
+    })
+
+
+@api_bp.post("/enrollment/devices")
+def set_enrollment_devices():
+    """Set which device IDs are used for fingerprint enrollment."""
+    data = request.json or {}
+    device_ids = data.get("device_ids", [])
+    if not isinstance(device_ids, list):
+        return jsonify({"error": "device_ids must be a list of integers"}), 400
+
+    from core.database import get_device
+    for did in device_ids:
+        if not get_device(int(did)):
+            return jsonify({"error": f"Device id={did} not found"}), 404
+
+    cfg = _load_cfg()
+    if "enrollment" not in cfg:
+        cfg["enrollment"] = {}
+    cfg["enrollment"]["device_ids"] = [int(i) for i in device_ids]
+    _save_cfg(cfg)
+    return jsonify({"ok": True, "device_ids": cfg["enrollment"]["device_ids"]})
+
 
 @api_bp.get("/dashboard")
 def dashboard():

@@ -73,6 +73,14 @@ def main():
     from core.scheduler import start_scheduler
     start_scheduler(cfg)
 
+    # Start WebSocket client if sync_mode is realtime
+    if cfg["sync"].get("sync_mode") == "realtime":
+        from core.socket_client import start_socket_client
+        start_socket_client(cfg)
+        log.info("WebSocket client started (sync_mode=realtime)")
+    else:
+        log.info(f"WebSocket client not started (sync_mode={cfg['sync'].get('sync_mode', 'timely')})")
+
     # Start web UI (blocking — must be last)
     from web.server import start_web_server
     start_web_server(cfg)

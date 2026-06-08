@@ -1,10 +1,15 @@
 """
 core/scheduler.py
 Background thread that runs auto-sync on a configurable interval.
+
+sync_mode behaviour:
+  - "manual"   → scheduler never auto-triggers (user clicks Sync in UI)
+  - "timely"   → existing behaviour, ticks every interval_seconds
+  - "realtime" → ERP triggers sync via WebSocket; scheduler still ticks
+                 as a fallback every interval_seconds in case WS drops
 """
 import logging
 import threading
-import time
 
 log = logging.getLogger("zk_agent")
 _scheduler_thread = None
@@ -18,7 +23,7 @@ def _loop(cfg: dict):
     interval = cfg["sync"].get("interval_seconds", 60)
 
     while not _stop_event.is_set():
-        # Re-read config on each tick (so UI changes take effect)
+        # Re-read config on each tick (so UI changes take effect without restart)
         import json
         from pathlib import Path
         try:
@@ -27,8 +32,10 @@ def _loop(cfg: dict):
         except Exception:
             live_cfg = cfg
 
-        if live_cfg["sync"].get("auto_sync", False):
-            db_log("INFO", "[SCHEDULER] Auto-sync triggered")
+        sync_mode = live_cfg["sync"].get("sync_mode", "timely")
+
+        if sync_mode in ("timely", "realtime"):
+            db_log("INFO", f"[SCHEDULER] Auto-sync triggered (mode={sync_mode})")
             try:
                 result = full_sync(live_cfg)
                 db_log("INFO",

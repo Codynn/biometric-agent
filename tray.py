@@ -23,6 +23,12 @@ else:
 # Make sure our own packages are importable
 sys.path.insert(0, str(BASE_DIR))
 
+# ── CRITICAL: set working directory to BASE_DIR so all relative paths
+#    (SQLite DB, config.json, log files) resolve correctly when the exe
+#    is launched by the installer or the Run key from Program Files. ──────────
+os.chdir(BASE_DIR)
+
+
 # ── Logging ───────────────────────────────────────────────────────────────────
 def setup_logging(file_cfg: dict):
     log_cfg = file_cfg.get("logging", {})
@@ -34,9 +40,11 @@ def setup_logging(file_cfg: dict):
     root = logging.getLogger()
     root.setLevel(level)
 
-    ch = logging.StreamHandler()
-    ch.setFormatter(fmt)
-    root.addHandler(ch)
+    # Avoid adding duplicate handlers if called more than once
+    if not root.handlers:
+        ch = logging.StreamHandler()
+        ch.setFormatter(fmt)
+        root.addHandler(ch)
 
     log_file = BASE_DIR / log_cfg.get("file", "agent.log")
     fh = logging.handlers.RotatingFileHandler(
@@ -54,12 +62,13 @@ def setup_logging(file_cfg: dict):
 # ── Service state (shared between agent threads and tray) ─────────────────────
 class ServiceState:
     def __init__(self):
-        self._lock           = threading.Lock()
-        self.adms_running    = False
+        self._lock             = threading.Lock()
+        self.adms_running      = False
         self.scheduler_running = False
         self.websocket_running = False
-        self.web_running     = False
-        self.web_port        = 5837
+        self.web_running       = False
+        self.web_port          = 5837
+        self.startup_error     = None   # holds exception message if startup fails
 
     def set(self, **kwargs):
         with self._lock:
@@ -69,11 +78,12 @@ class ServiceState:
     def snapshot(self):
         with self._lock:
             return {
-                "adms":      self.adms_running,
-                "scheduler": self.scheduler_running,
-                "websocket": self.websocket_running,
-                "web":       self.web_running,
-                "web_port":  self.web_port,
+                "adms":          self.adms_running,
+                "scheduler":     self.scheduler_running,
+                "websocket":     self.websocket_running,
+                "web":           self.web_running,
+                "web_port":      self.web_port,
+                "startup_error": self.startup_error,
             }
 
 
@@ -92,6 +102,7 @@ def start_agent():
 
         log.info("=" * 50)
         log.info(f"Starting {file_cfg['agent']['name']} (tray mode)")
+        log.info(f"BASE_DIR: {BASE_DIR}")
         log.info("=" * 50)
 
         from core.database import init_db
@@ -99,7 +110,8 @@ def start_agent():
         log.info("Database initialised")
 
         cfg = get_full_config()
-        STATE.set(web_port=cfg["agent"].get("web_port", 5837))
+        web_port = cfg["agent"].get("web_port", 5837)
+        STATE.set(web_port=web_port)
 
         # ADMS server
         from core.adms_server import start_adms_server
@@ -122,16 +134,21 @@ def start_agent():
 
         # Web UI — runs in its own daemon thread so tray stays responsive
         def _run_web():
-            from web.server import start_web_server
-            STATE.set(web_running=True)
-            start_web_server(cfg)
+            try:
+                from web.server import start_web_server
+                STATE.set(web_running=True)
+                start_web_server(cfg)
+            except Exception as exc:
+                logging.getLogger("zk_agent").exception(f"Web server error: {exc}")
+                STATE.set(web_running=False, startup_error=str(exc))
 
         web_thread = threading.Thread(target=_run_web, daemon=True, name="web-ui")
         web_thread.start()
-        log.info(f"Web UI started on port {STATE.web_port}")
+        log.info(f"Web UI thread started on port {web_port}")
 
     except Exception as e:
         logging.getLogger("zk_agent").exception(f"Agent startup error: {e}")
+        STATE.set(startup_error=str(e))
 
 
 # ── Tray icon ─────────────────────────────────────────────────────────────────
@@ -141,7 +158,7 @@ def _status_label(name: str, ok: bool) -> str:
     return f"  {bullet} {name}: {status}"
 
 
-def build_menu(pystray, cfg_snapshot):
+def build_menu(pystray, snapshot):
     from pystray import MenuItem as Item, Menu
 
     def open_panel(_icon, _item):
@@ -150,8 +167,12 @@ def build_menu(pystray, cfg_snapshot):
     def restart_agent(_icon, _item):
         """Restart the whole process (re-reads config from disk)."""
         import subprocess
-        exe = sys.executable if not getattr(sys, "frozen", False) else sys.argv[0]
-        subprocess.Popen([exe] + (sys.argv[1:] if not getattr(sys, "frozen", False) else []))
+        if getattr(sys, "frozen", False):
+            exe = sys.argv[0]
+            subprocess.Popen([exe])
+        else:
+            exe = sys.executable
+            subprocess.Popen([exe] + sys.argv)
         _icon.stop()
         os._exit(0)
 
@@ -159,10 +180,9 @@ def build_menu(pystray, cfg_snapshot):
         _icon.stop()
         os._exit(0)
 
-    s = STATE.snapshot()
-
-    return Menu(
-        Item("Biometric Agent", None, enabled=False),
+    s = snapshot
+    items = [
+        Item("Biometric Attendance Agent", None, enabled=False),
         Menu.SEPARATOR,
         Item("Open Web Panel", open_panel, default=True),
         Menu.SEPARATOR,
@@ -170,10 +190,18 @@ def build_menu(pystray, cfg_snapshot):
         Item(_status_label("Scheduler",    s["scheduler"]), None, enabled=False),
         Item(_status_label("WebSocket",    s["websocket"]), None, enabled=False),
         Item(_status_label("Web UI",       s["web"]),       None, enabled=False),
+    ]
+
+    if s.get("startup_error"):
+        items.append(Item(f"  ⚠ Error: {s['startup_error'][:60]}", None, enabled=False))
+
+    items += [
         Menu.SEPARATOR,
         Item("Restart", restart_agent),
         Item("Exit",    exit_agent),
-    )
+    ]
+
+    return Menu(*items)
 
 
 def run_tray():
@@ -198,7 +226,8 @@ def run_tray():
         """Rebuild the menu every 5 s so status labels stay current."""
         while not _stop_event.is_set():
             try:
-                icon.menu = build_menu(pystray, STATE.snapshot())
+                snap = STATE.snapshot()
+                icon.menu = build_menu(pystray, snap)
                 icon.update_menu()
             except Exception:
                 pass
@@ -224,6 +253,8 @@ if __name__ == "__main__":
     # On Windows, hide the console window when run as a windowed app
     if sys.platform == "win32":
         import ctypes
-        ctypes.windll.user32.ShowWindow(ctypes.windll.kernel32.GetConsoleWindow(), 0)
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)
 
     run_tray()

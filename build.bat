@@ -57,6 +57,14 @@ if !ERRORLEVEL! NEQ 0 (
     pause
     exit /b 1
 )
+
+:: Verify the exe was actually produced
+if not exist dist\%APP_NAME%\%APP_NAME%.exe (
+    echo ERROR: PyInstaller finished but dist\%APP_NAME%\%APP_NAME%.exe not found.
+    echo        Check build.spec paths and entry point.
+    pause
+    exit /b 1
+)
 echo    Done. Bundled app is in dist\%APP_NAME%\
 echo.
 

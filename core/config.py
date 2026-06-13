@@ -11,7 +11,21 @@ from pathlib import Path
 log = logging.getLogger("zk_agent")
 
 BASE_DIR = Path(__file__).parent.parent
-CONFIG_PATH = BASE_DIR / "config.json"
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+
+
+DATA_DIR = Path(os.environ.get("APPDATA", str(BASE_DIR))) / "BiometricAgent"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+ 
+CONFIG_PATH = DATA_DIR / "config.json"
+ 
+# Shipped example / defaults (read-only, inside install dir)
+CONFIG_EXAMPLE_PATH = BASE_DIR / "config-example.json"
+
+
+
+
 
 # Defaults used to create config.json if it doesn't exist.
 # These match the project's original config.json values.

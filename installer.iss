@@ -81,9 +81,6 @@ Filename: "{cmd}"; \
 ; Kill the running process before uninstall so files can be deleted
 Filename: "taskkill"; Parameters: "/f /im {#AppExeName}"; Flags: runhidden; RunOnceId: "KillAgent"
 
-[UninstallDelete]
-; Remove the firewall rule on uninstall
-Type: none
 
 [Code]
 // Kill any running instance before upgrading/reinstalling

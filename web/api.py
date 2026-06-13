@@ -24,7 +24,7 @@ def get_config():
     safe = json.loads(json.dumps(cfg))
     token = safe["erp"].get("token", "")
     if token:
-        safe["erp"]["token"] = token[:6] + "…" + token[-4:] if len(token) > 10 else "••••••"
+        safe["erp"]["token"] = token[:6] + "..." + token[-4:] if len(token) > 10 else "......"
     return jsonify(safe)
 
 
@@ -33,7 +33,7 @@ def save_config():
     from core.database import set_config_section
     data = request.json or {}
 
-    # ── config.json: agent name, ports, logging ──
+    # config.json: agent name, ports, logging
     file_cfg = load_file_config()
     file_changed = False
 
@@ -53,13 +53,13 @@ def save_config():
     if file_changed:
         save_file_config(file_cfg)
 
-    # ── DB-backed config: ERP, sync, enrollment ──
+    # DB-backed config: ERP, sync, enrollment
     db_section = {}
 
     erp = {}
     if "erp_base_url" in data:
         erp["base_url"] = data["erp_base_url"].rstrip("/")
-    if "erp_token" in data and data["erp_token"] and "…" not in data["erp_token"]:
+    if "erp_token" in data and data["erp_token"] and "..." not in data["erp_token"]:
         erp["token"] = data["erp_token"]
     if "erp_name" in data:
         erp["name"] = data["erp_name"]
@@ -112,14 +112,9 @@ def onboarding_status():
 
 @api_bp.post("/onboarding")
 def complete_onboarding():
-    """
-    Save initial setup from the onboarding wizard:
-    agent name, ERP URL/token, sync mode — then mark onboarding complete.
-    """
     from core.database import set_config_section
     data = request.json or {}
 
-    # config.json: agent name (ports/logging keep their defaults)
     if "agent_name" in data:
         file_cfg = load_file_config()
         file_cfg["agent"]["name"] = data["agent_name"]
@@ -145,12 +140,18 @@ def complete_onboarding():
 def restart_agent():
     """Restart the whole agent process so config.json changes take effect."""
     def _do_restart():
-        import time
-        time.sleep(0.5)  # give time for response to flush
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        import time, subprocess
+        time.sleep(0.5)  # let the HTTP response flush first
+        if getattr(sys, "frozen", False):
+            # Frozen exe: spawn a new copy then exit this one
+            subprocess.Popen([sys.argv[0]])
+        else:
+            # Plain Python: re-exec in place
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        os._exit(0)
 
     threading.Thread(target=_do_restart, daemon=True).start()
-    return jsonify({"ok": True, "message": "Restarting…"})
+    return jsonify({"ok": True, "message": "Restarting..."})
 
 
 # ── Devices ───────────────────────────────────────────────
@@ -200,7 +201,6 @@ def update_device(device_id):
                "omit_ping", "force_udp", "enabled"]
     update  = {k: data[k] for k in allowed if k in data}
 
-    # Coerce integers
     for int_field in ["port", "password", "omit_ping", "force_udp", "enabled"]:
         if int_field in update:
             update[int_field] = int(update[int_field])
@@ -294,19 +294,6 @@ def sync_history():
     return jsonify(get_sync_history(limit))
 
 
-# ── Logs ──────────────────────────────────────────────────
-
-@api_bp.get("/logs")
-def get_logs():
-    from core.database import get_logs
-    limit = int(request.args.get("limit", 100))
-    return jsonify(get_logs(limit))
-
-
-# ── Dashboard stats ───────────────────────────────────────
-
-# ── Sync mode ─────────────────────────────────────────────
-
 @api_bp.get("/sync/mode")
 def get_sync_mode():
     cfg = get_full_config()
@@ -330,7 +317,16 @@ def set_sync_mode():
     return jsonify({"ok": True, "sync_mode": mode})
 
 
-# ── Enrollment device settings ────────────────────────────
+# ── Logs ──────────────────────────────────────────────────
+
+@api_bp.get("/logs")
+def get_logs():
+    from core.database import get_logs
+    limit = int(request.args.get("limit", 100))
+    return jsonify(get_logs(limit))
+
+
+# ── Enrollment ────────────────────────────────────────────
 
 @api_bp.get("/enrollment/devices")
 def get_enrollment_devices():
@@ -346,7 +342,6 @@ def get_enrollment_devices():
 
 @api_bp.post("/enrollment/devices")
 def set_enrollment_devices():
-    """Set which device IDs are used for fingerprint enrollment."""
     from core.database import set_config_section
     data = request.json or {}
     device_ids = data.get("device_ids", [])
@@ -362,6 +357,8 @@ def set_enrollment_devices():
     set_config_section({"enrollment": {"device_ids": ids}})
     return jsonify({"ok": True, "device_ids": ids})
 
+
+# ── Dashboard ─────────────────────────────────────────────
 
 @api_bp.get("/dashboard")
 def dashboard():

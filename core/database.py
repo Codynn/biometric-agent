@@ -7,7 +7,24 @@ import threading
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "agent.db"
+
+
+# ── DATA_DIR: writable directory for DB, logs, config ────────────────────────
+# Program Files is read-only for non-admin processes, so we MUST use APPDATA.
+# %APPDATA%\BiometricAgent  (~\AppData\Roaming\BiometricAgent)
+DATA_DIR = Path(os.environ.get("APPDATA", str(BASE_DIR))) / "BiometricAgent"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+# Make sure our own packages are importable
+sys.path.insert(0, str(BASE_DIR))
+
+# Set working directory to DATA_DIR so any code that uses relative paths
+# for DB/config/logs also lands in the writable location.
+os.chdir(DATA_DIR)
+
+
+
+DB_PATH = DATA_DIR / "agemt.db"
 _local = threading.local()
 
 

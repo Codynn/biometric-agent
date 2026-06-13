@@ -17,7 +17,7 @@ CONFIG_PATH = BASE_DIR / "config.json"
 # These match the project's original config.json values.
 DEFAULT_FILE_CONFIG = {
     "agent": {
-        "name": "Betterschool Attendance Agent",
+        "name": "Biometric Attendance Agent",
         "adms_port": 5836,
         "web_port": 5837
     },

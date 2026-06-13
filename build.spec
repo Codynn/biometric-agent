@@ -1,5 +1,5 @@
 # build.spec
-# PyInstaller spec file for Betterschool Attendance Agent
+# PyInstaller spec file for Biometric Attendance Agent
 # Run with: pyinstaller build.spec
 
 import sys
@@ -98,7 +98,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,          # use COLLECT (folder mode) — more reliable than onefile
-    name="BetterschoolAgent",
+    name="BiometricAgent",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -116,5 +116,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="BetterschoolAgent",       # output folder: dist/BetterschoolAgent/
+    name="BiometricAgent",       # output folder: dist/BiometricAgent/
 )

@@ -1,6 +1,6 @@
 # ZK Attendance Agent
 
-On-premise attendance agent for ZKTeco devices. Collects attendance from SDK (LAN) and ADMS (WiFi push) devices and syncs to BetterSchool ERP.
+On-premise attendance agent for ZKTeco devices. Collects attendance from SDK (LAN) and ADMS (WiFi push) devices and syncs to Biometric ERP.
 
 ## Setup
 
@@ -16,7 +16,7 @@ Open **http://localhost:5837** in your browser.
 ## Architecture
 
 ```
-ERP Cloud (BetterSchool)
+ERP Cloud (Biometric)
     ↑  attendance sync (HTTP POST)
     ↑  heartbeat
     ↓  commands (enable/disable users)

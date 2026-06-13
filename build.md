@@ -1,4 +1,4 @@
-# Building the Betterschool Attendance Agent Installer
+# Building the Biometric Attendance Agent Installer
 
 ## Prerequisites (Windows build machine)
 
@@ -51,14 +51,14 @@ That's it. The script:
 
 1. Installs all Python dependencies (including `pystray`, `Pillow`, `pyinstaller`)
 2. Cleans old build output
-3. Runs PyInstaller → produces `dist\BetterschoolAgent\`
-4. Runs Inno Setup → produces `installer_output\BetterschoolAgentSetup.exe`
+3. Runs PyInstaller → produces `dist\BiometricAgent\`
+4. Runs Inno Setup → produces `installer_output\BiometricAgentSetup.exe`
 
 ---
 
 ### 2. What the installer does on the user's machine
 
-- Installs to `C:\Program Files\Betterschool Attendance Agent\`
+- Installs to `C:\Program Files\Biometric Attendance Agent\`
 - Creates a Start Menu shortcut
 - Optionally (user can untick) adds a registry Run key so the agent
   starts automatically on Windows login
@@ -118,7 +118,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: installer
-          path: installer_output\BetterschoolAgentSetup.exe
+          path: installer_output\BiometricAgentSetup.exe
 ```
 
 ---
@@ -130,5 +130,5 @@ jobs:
 | `ModuleNotFoundError` after install | Add the missing module to `hiddenimports` in `build.spec`                    |
 | Tray icon doesn't appear            | Make sure `assets/icon.ico` exists; fallback is a green square               |
 | App crashes silently                | Temporarily set `console=True` in `build.spec` to see output                 |
-| Port already in use                 | Another instance is running — check Task Manager for `BetterschoolAgent.exe` |
+| Port already in use                 | Another instance is running — check Task Manager for `BiometricAgent.exe` |
 | Inno Setup not found                | Install from https://jrsoftware.org/isinfo.php — default path assumed        |

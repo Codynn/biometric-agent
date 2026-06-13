@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 :: ============================================================
-::  build.bat — Build Betterschool Attendance Agent installer
+::  build.bat — Build Biometric Attendance Agent installer
 ::  Run this on your Windows 10/11 build machine.
 ::  Requires:
 ::    - Python 3.10+ in PATH  (with pip)
@@ -10,11 +10,11 @@ setlocal EnableDelayedExpansion
 :: ============================================================
 
 set INNO_COMPILER="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
-set APP_NAME=BetterschoolAgent
+set APP_NAME=BiometricAgent
 
 echo.
 echo ============================================================
-echo  Betterschool Agent -- Build Script
+echo  Biometric Agent -- Build Script
 echo ============================================================
 echo.
 
@@ -84,7 +84,7 @@ echo.
 
 echo ============================================================
 echo  Build complete!
-echo  Installer: installer_output\BetterschoolAgentSetup.exe
+echo  Installer: installer_output\BiometricAgentSetup.exe
 echo ============================================================
 echo.
 pause

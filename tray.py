@@ -162,7 +162,7 @@ def build_menu(pystray, cfg_snapshot):
     s = STATE.snapshot()
 
     return Menu(
-        Item("Betterschool Agent", None, enabled=False),
+        Item("Biometric Agent", None, enabled=False),
         Menu.SEPARATOR,
         Item("Open Web Panel", open_panel, default=True),
         Menu.SEPARATOR,
@@ -189,9 +189,9 @@ def run_tray():
         image = Image.new("RGB", (64, 64), color=(34, 139, 34))
 
     icon = pystray.Icon(
-        name="BetterschoolAgent",
+        name="BiometricAgent",
         icon=image,
-        title="Betterschool Attendance Agent",
+        title="Biometric Attendance Agent",
     )
 
     def refresh_menu():

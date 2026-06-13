@@ -86,7 +86,7 @@ def init_db():
 # Defaults for everything that used to live under config.json's
 # "erp", "sync", and "enrollment" sections, plus onboarding state.
 _CONFIG_DEFAULTS = {
-    "erp.name":                "BetterSchool ERP",
+    "erp.name":                "Biometric ERP",
     "erp.base_url":            "",
     "erp.token":               "",
     "erp.endpoints.push_attendance": "/biometric/agent/attendance",

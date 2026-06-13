@@ -1,11 +1,11 @@
 ; installer.iss
-; Inno Setup script for Betterschool Attendance Agent
+; Inno Setup script for Biometric Attendance Agent
 ; Requires Inno Setup 6+ — https://jrsoftware.org/isinfo.php
 
-#define AppName      "Betterschool Attendance Agent"
+#define AppName      "Biometric Attendance Agent"
 #define AppVersion   "1.0.0"
-#define AppPublisher "Betterschool"
-#define AppExeName   "BetterschoolAgent.exe"
+#define AppPublisher "Biometric"
+#define AppExeName   "BiometricAgent.exe"
 #define AppId        "{{A3F2C1D0-8B4E-4F7A-9C2D-1E5B6A3F8D9C}"
 
 [Setup]
@@ -13,9 +13,9 @@ AppId={#AppId}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-AppPublisherURL=https://betterschool.app
-AppSupportURL=https://betterschool.app
-AppUpdatesURL=https://betterschool.app
+AppPublisherURL=https://Biometric.app
+AppSupportURL=https://Biometric.app
+AppUpdatesURL=https://Biometric.app
 ; Install to Program Files
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
@@ -23,7 +23,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 ; Output
 OutputDir=installer_output
-OutputBaseFilename=BetterschoolAgentSetup
+OutputBaseFilename=BiometricAgentSetup
 ; Icon
 SetupIconFile=assets\icon.ico
 ; Compression
@@ -48,7 +48,7 @@ Name: "autostart"; Description: "Start {#AppName} automatically when Windows sta
 
 [Files]
 ; Copy everything from the PyInstaller output folder
-Source: "dist\BetterschoolAgent\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\BiometricAgent\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 ; Start Menu shortcut

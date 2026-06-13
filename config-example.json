@@ -1,11 +1,11 @@
 {
   "agent": {
-    "name": "Betterschool Attendance Agent",
+    "name": "Biometric Attendance Agent",
     "adms_port": 5836,
     "web_port": 5837
   },
   "erp": {
-    "name": "BetterSchool ERP",
+    "name": "Biometric ERP",
     "base_url": "http://localhost:7654",
     "token": "bWFucGFuZQ==.0847305e2067c8b7c1feab3caf0fe83d3d4694c8",
     "endpoints": {

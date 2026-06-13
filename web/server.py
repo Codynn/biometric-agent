@@ -13,30 +13,21 @@ log = logging.getLogger("zk_agent")
 
 
 def _templates_dir() -> Path:
-    """
-    Find the templates folder whether we're frozen or running from source.
-
-    PyInstaller COLLECT layout after  ("web/templates", "web/templates"):
-        dist/BiometricAgent/
-            BiometricAgent.exe
-            web/
-                templates/
-                    index.html
-    """
     if getattr(sys, "frozen", False):
         base = Path(sys.executable).parent
-        candidate = base / "web" / "templates"
-        if candidate.exists():
-            return candidate
-        # Fallback: PyInstaller sometimes flattens — check one level up
-        candidate2 = base / "templates"
-        if candidate2.exists():
-            return candidate2
+        candidates = [
+            base / "_internal" / "web" / "templates",   # PyInstaller 6+ default
+            base / "web" / "templates",
+            base / "_internal" / "templates",
+            base / "templates",
+        ]
+        for c in candidates:
+            if (c / "index.html").exists():
+                return c
         raise RuntimeError(
-            f"Cannot find templates dir. Looked in:\n  {candidate}\n  {candidate2}\n"
-            f"Dist contents: {list(base.iterdir())}"
+            "Cannot find templates dir. Searched:\n" +
+            "\n".join(f"  {c}" for c in candidates)
         )
-    # Running as plain .py — templates/ is next to this file (web/templates)
     return Path(__file__).parent / "templates"
 
 

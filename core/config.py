@@ -1,25 +1,27 @@
 """
 core/config.py
-Manages config.json (agent name, ports, logging — needed at process startup)
-and merges it with DB-backed config (ERP, sync, enrollment — see core/database.py)
+Manages config.json (agent name, ports, logging - needed at process startup)
+and merges it with DB-backed config (ERP, sync, enrollment - see core/database.py)
 into a single config dict used throughout the app.
 """
 import json
 import logging
+import os
+import sys
 from pathlib import Path
 
 log = logging.getLogger("zk_agent")
 
-BASE_DIR = Path(__file__).parent.parent
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).parent
+else:
+    BASE_DIR = Path(__file__).parent.parent
 
-
-DATA_DIR = Path(os.environ.get("APPDATA", str(BASE_DIR))) / "BiometricAgent"
+DATA_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / "BiometricAgent"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
- 
+
 CONFIG_PATH = DATA_DIR / "config.json"
- 
+
 # Shipped example / defaults (read-only, inside install dir)
 CONFIG_EXAMPLE_PATH = BASE_DIR / "config-example.json"
 

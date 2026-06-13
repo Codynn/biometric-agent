@@ -3,3 +3,6 @@ venv
 *.db
 *.log
 config.json
+
+dist
+build

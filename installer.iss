@@ -76,6 +76,8 @@ Filename: "taskkill"; Parameters: "/f /im {#AppExeName}"; Flags: runhidden; RunO
 [Code]
 // Kill any running instance before upgrading/reinstalling
 procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
 begin
   if CurStep = ssInstall then
   begin

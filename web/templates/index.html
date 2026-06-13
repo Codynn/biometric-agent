@@ -1,891 +1,1875 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ZK Attendance Agent</title>
-<style>
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #22263a;
-    --border: #2e3350;
-    --accent: #4f8ef7;
-    --accent-hover: #6ba3ff;
-    --success: #22c55e;
-    --warn: #f59e0b;
-    --error: #ef4444;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --radius: 10px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; display: flex; }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZK Attendance Agent</title>
+    <style>
+      :root {
+        --bg: #0f1117;
+        --surface: #1a1d27;
+        --surface2: #22263a;
+        --border: #2e3350;
+        --accent: #4f8ef7;
+        --accent-hover: #6ba3ff;
+        --success: #22c55e;
+        --warn: #f59e0b;
+        --error: #ef4444;
+        --text: #e2e8f0;
+        --muted: #64748b;
+        --radius: 10px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", system-ui, sans-serif;
+        font-size: 14px;
+        min-height: 100vh;
+      }
+      #app-shell {
+        display: flex;
+        min-height: 100vh;
+      }
 
-  /* Sidebar */
-  #sidebar {
-    width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; padding: 0;
-  }
-  #sidebar .brand {
-    padding: 20px 18px 16px; border-bottom: 1px solid var(--border);
-    font-weight: 700; font-size: 15px; color: var(--accent); letter-spacing: 0.3px;
-  }
-  #sidebar .brand span { display: block; font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-  #sidebar nav { flex: 1; padding: 12px 0; }
-  #sidebar nav a {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 18px; color: var(--muted); text-decoration: none;
-    font-size: 13.5px; transition: all .15s; cursor: pointer; border-left: 3px solid transparent;
-  }
-  #sidebar nav a:hover { color: var(--text); background: var(--surface2); }
-  #sidebar nav a.active { color: var(--accent); background: var(--surface2); border-left-color: var(--accent); }
-  #sidebar nav a svg { width: 16px; height: 16px; flex-shrink: 0; }
-  #sidebar .sync-status {
-    padding: 14px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted);
-  }
-  #sidebar .sync-status .dot {
-    display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); margin-right: 6px;
-  }
-  #sidebar .sync-status .dot.on { background: var(--success); box-shadow: 0 0 6px var(--success); }
+      /* Sidebar */
+      #sidebar {
+        width: 220px;
+        min-width: 220px;
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+      }
+      #sidebar .brand {
+        padding: 20px 18px 16px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+        font-size: 15px;
+        color: var(--accent);
+        letter-spacing: 0.3px;
+      }
+      #sidebar .brand span {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 400;
+        margin-top: 2px;
+      }
+      #sidebar nav {
+        flex: 1;
+        padding: 12px 0;
+      }
+      #sidebar nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 18px;
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 13.5px;
+        transition: all 0.15s;
+        cursor: pointer;
+        border-left: 3px solid transparent;
+      }
+      #sidebar nav a:hover {
+        color: var(--text);
+        background: var(--surface2);
+      }
+      #sidebar nav a.active {
+        color: var(--accent);
+        background: var(--surface2);
+        border-left-color: var(--accent);
+      }
+      #sidebar nav a svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+      #sidebar .sync-status {
+        padding: 14px 18px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #sidebar .sync-status .dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--muted);
+        margin-right: 6px;
+      }
+      #sidebar .sync-status .dot.on {
+        background: var(--success);
+        box-shadow: 0 0 6px var(--success);
+      }
 
-  /* Main */
-  #main { flex: 1; overflow-y: auto; padding: 28px 32px; }
-  .page { display: none; }
-  .page.active { display: block; }
+      /* Main */
+      #main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 28px 32px;
+      }
+      .page {
+        display: none;
+      }
+      .page.active {
+        display: block;
+      }
 
-  h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
-  .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+      h1 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+      h2 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: var(--text);
+      }
+      .subtitle {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 24px;
+      }
 
-  /* Cards */
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
-  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-  .card-title { font-size: 14px; font-weight: 600; }
+      /* Cards */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .card-title {
+        font-size: 14px;
+        font-weight: 600;
+      }
 
-  /* Stats row */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
-  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
-  .stat-value { font-size: 28px; font-weight: 700; color: var(--text); }
-  .stat-value.accent { color: var(--accent); }
-  .stat-value.success { color: var(--success); }
-  .stat-value.warn { color: var(--warn); }
+      /* Stats row */
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+      }
+      .stat-label {
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        margin-bottom: 8px;
+      }
+      .stat-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .stat-value.accent {
+        color: var(--accent);
+      }
+      .stat-value.success {
+        color: var(--success);
+      }
+      .stat-value.warn {
+        color: var(--warn);
+      }
 
-  /* Buttons */
-  .btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px; border-radius: 7px; font-size: 13px; font-weight: 500;
-    cursor: pointer; border: none; transition: all .15s; text-decoration: none;
-  }
-  .btn-primary { background: var(--accent); color: #fff; }
-  .btn-primary:hover { background: var(--accent-hover); }
-  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-  .btn-secondary:hover { background: var(--border); }
-  .btn-success { background: var(--success); color: #fff; }
-  .btn-danger { background: transparent; color: var(--error); border: 1px solid var(--error); }
-  .btn-danger:hover { background: var(--error); color: #fff; }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-  .btn:disabled { opacity: .5; cursor: not-allowed; }
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        transition: all 0.15s;
+        text-decoration: none;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+      }
+      .btn-secondary {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-secondary:hover {
+        background: var(--border);
+      }
+      .btn-success {
+        background: var(--success);
+        color: #fff;
+      }
+      .btn-danger {
+        background: transparent;
+        color: var(--error);
+        border: 1px solid var(--error);
+      }
+      .btn-danger:hover {
+        background: var(--error);
+        color: #fff;
+      }
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
 
-  /* Table */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; }
-  th { text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-  td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--surface2); }
+      /* Table */
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th {
+        text-align: left;
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+        vertical-align: middle;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background: var(--surface2);
+      }
 
-  /* Badges */
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-  .badge-sdk { background: #1e3a5f; color: #60a5fa; }
-  .badge-adms { background: #1e3a2f; color: #34d399; }
-  .badge-online { background: #14532d; color: var(--success); }
-  .badge-offline { background: #2d1b1b; color: var(--error); }
-  .badge-synced { background: #14532d; color: var(--success); }
-  .badge-pending { background: #292418; color: var(--warn); }
-  .badge-running { background: #1a2744; color: var(--accent); }
-  .badge-success { background: #14532d; color: var(--success); }
-  .badge-failed { background: #2d1b1b; color: var(--error); }
+      /* Badges */
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .badge-sdk {
+        background: #1e3a5f;
+        color: #60a5fa;
+      }
+      .badge-adms {
+        background: #1e3a2f;
+        color: #34d399;
+      }
+      .badge-online {
+        background: #14532d;
+        color: var(--success);
+      }
+      .badge-offline {
+        background: #2d1b1b;
+        color: var(--error);
+      }
+      .badge-synced {
+        background: #14532d;
+        color: var(--success);
+      }
+      .badge-pending {
+        background: #292418;
+        color: var(--warn);
+      }
+      .badge-running {
+        background: #1a2744;
+        color: var(--accent);
+      }
+      .badge-success {
+        background: #14532d;
+        color: var(--success);
+      }
+      .badge-failed {
+        background: #2d1b1b;
+        color: var(--error);
+      }
 
-  /* Forms */
-  .form-group { margin-bottom: 16px; }
-  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  input, select, textarea {
-    width: 100%; padding: 9px 12px; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 7px; color: var(--text); font-size: 13px; outline: none;
-    transition: border-color .15s;
-  }
-  input:focus, select:focus { border-color: var(--accent); }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+      /* Forms */
+      .form-group {
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 9px 12px;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        color: var(--text);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      input:focus,
+      select:focus {
+        border-color: var(--accent);
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .form-row-3 {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px;
+      }
 
-  /* Toggle */
-  .toggle { position: relative; display: inline-block; width: 42px; height: 24px; }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider {
-    position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 24px; transition: .2s;
-  }
-  .toggle-slider:before {
-    content: ""; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px;
-    background: white; border-radius: 50%; transition: .2s;
-  }
-  .toggle input:checked + .toggle-slider { background: var(--accent); }
-  .toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
+      /* Toggle */
+      .toggle {
+        position: relative;
+        display: inline-block;
+        width: 42px;
+        height: 24px;
+      }
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background: var(--border);
+        border-radius: 24px;
+        transition: 0.2s;
+      }
+      .toggle-slider:before {
+        content: "";
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        left: 3px;
+        bottom: 3px;
+        background: white;
+        border-radius: 50%;
+        transition: 0.2s;
+      }
+      .toggle input:checked + .toggle-slider {
+        background: var(--accent);
+      }
+      .toggle input:checked + .toggle-slider:before {
+        transform: translateX(18px);
+      }
 
-  /* Log */
-  .log-entry { padding: 6px 10px; border-bottom: 1px solid var(--border); font-family: monospace; font-size: 12px; }
-  .log-entry:last-child { border-bottom: none; }
-  .log-entry .ts { color: var(--muted); margin-right: 8px; }
-  .log-entry.ERROR .lvl { color: var(--error); }
-  .log-entry.WARN  .lvl { color: var(--warn); }
-  .log-entry.INFO  .lvl { color: var(--accent); }
+      /* Log */
+      .log-entry {
+        padding: 6px 10px;
+        border-bottom: 1px solid var(--border);
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .log-entry:last-child {
+        border-bottom: none;
+      }
+      .log-entry .ts {
+        color: var(--muted);
+        margin-right: 8px;
+      }
+      .log-entry.ERROR .lvl {
+        color: var(--error);
+      }
+      .log-entry.WARN .lvl {
+        color: var(--warn);
+      }
+      .log-entry.INFO .lvl {
+        color: var(--accent);
+      }
 
-  /* Modal */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.65);
-    z-index: 100; align-items: center; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; min-width: 420px; max-width: 560px; width: 100%; }
-  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; }
-  .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+      /* Modal */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.65);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 28px;
+        min-width: 420px;
+        max-width: 560px;
+        width: 100%;
+      }
+      .modal-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+      .modal-footer {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 24px;
+      }
 
-  /* Toast */
-  #toast {
-    position: fixed; bottom: 28px; right: 28px; z-index: 200;
-    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    padding: 12px 20px; border-radius: 9px; font-size: 13px;
-    transform: translateY(80px); opacity: 0; transition: all .25s; pointer-events: none;
-    max-width: 320px;
-  }
-  #toast.show { transform: translateY(0); opacity: 1; }
-  #toast.success { border-color: var(--success); color: var(--success); }
-  #toast.error   { border-color: var(--error); color: var(--error); }
+      /* Toast */
+      #toast {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        z-index: 200;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        padding: 12px 20px;
+        border-radius: 9px;
+        font-size: 13px;
+        transform: translateY(80px);
+        opacity: 0;
+        transition: all 0.25s;
+        pointer-events: none;
+        max-width: 320px;
+      }
+      #toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      #toast.success {
+        border-color: var(--success);
+        color: var(--success);
+      }
+      #toast.error {
+        border-color: var(--error);
+        color: var(--error);
+      }
 
-  /* Empty state */
-  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
-  .empty svg { width: 40px; height: 40px; margin: 0 auto 12px; display: block; opacity: .4; }
+      /* Empty state */
+      .empty {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--muted);
+      }
+      .empty svg {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 12px;
+        display: block;
+        opacity: 0.4;
+      }
 
-  /* Chip */
-  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; background: var(--surface2); border-radius: 20px; font-size: 12px; color: var(--muted); border: 1px solid var(--border); }
+      /* Chip */
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        background: var(--surface2);
+        border-radius: 20px;
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
 
-  .actions { display: flex; gap: 8px; }
-  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+      .actions {
+        display: flex;
+        gap: 8px;
+      }
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
 
-  @media (max-width: 768px) {
-    #sidebar { width: 56px; min-width: 56px; }
-    #sidebar .brand, #sidebar nav a span, #sidebar .sync-status { display: none; }
-    #sidebar nav a { justify-content: center; padding: 14px; }
-    #main { padding: 20px 16px; }
-    .form-row, .form-row-3 { grid-template-columns: 1fr; }
-  }
-</style>
-</head>
-<body>
+      @media (max-width: 768px) {
+        #sidebar {
+          width: 56px;
+          min-width: 56px;
+        }
+        #sidebar .brand,
+        #sidebar nav a span,
+        #sidebar .sync-status {
+          display: none;
+        }
+        #sidebar nav a {
+          justify-content: center;
+          padding: 14px;
+        }
+        #main {
+          padding: 20px 16px;
+        }
+        .form-row,
+        .form-row-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Onboarding -->
+    <div
+      id="onboarding-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: var(--bg);
+        z-index: 50;
+        overflow-y: auto;
+      "
+    >
+      <div style="max-width: 520px; margin: 60px auto; padding: 0 20px">
+        <div style="text-align: center; margin-bottom: 28px">
+          <h1 style="font-size: 24px; margin-bottom: 8px">Welcome</h1>
+          <p class="subtitle" style="margin-bottom: 0">
+            Let's connect this agent to your ERP to get started.
+          </p>
+        </div>
 
-<!-- Sidebar -->
-<aside id="sidebar">
-  <div class="brand">ZK Agent<span id="agent-name-display">Loading…</span></div>
-  <nav>
-    <a class="active" data-page="dashboard">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      <span>Dashboard</span>
-    </a>
-    <a data-page="devices">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><circle cx="12" cy="17" r="1"/></svg>
-      <span>Devices</span>
-    </a>
-    <a data-page="attendance">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      <span>Attendance</span>
-    </a>
-    <a data-page="sync">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.13-3.36M20 15a9 9 0 01-14.13 3.36"/></svg>
-      <span>Sync</span>
-    </a>
-    <a data-page="logs">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg>
-      <span>Logs</span>
-    </a>
-    <a data-page="settings">
-      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      <span>Settings</span>
-    </a>
-  </nav>
-  <div class="sync-status">
-    <span class="dot" id="auto-sync-dot"></span>
-    <span id="auto-sync-label">Auto-sync off</span>
-  </div>
-</aside>
+        <div class="card">
+          <h2>Agent Name</h2>
+          <div class="form-group">
+            <label>Give this agent a name (e.g. your school's name)</label>
+            <input
+              type="text"
+              id="ob-agent-name"
+              placeholder="Betterschool Attendance Agent"
+            />
+          </div>
+        </div>
 
-<!-- Main content -->
-<main id="main">
+        <div class="card">
+          <h2>ERP Connection</h2>
+          <div class="form-group">
+            <label>ERP Base URL *</label>
+            <input
+              type="url"
+              id="ob-erp-url"
+              placeholder="https://api.yourerp.com"
+            />
+          </div>
+          <div class="form-group">
+            <label>API Token *</label>
+            <input
+              type="password"
+              id="ob-erp-token"
+              placeholder="Paste the agent token from your ERP"
+            />
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 6px">
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="testErpOnboarding()"
+            >
+              Test Connection
+            </button>
+            <span
+              id="ob-erp-test-result"
+              style="font-size: 12px; line-height: 32px; color: var(--muted)"
+            ></span>
+          </div>
+        </div>
 
-  <!-- Dashboard -->
-  <div class="page active" id="page-dashboard">
-    <h1>Dashboard</h1>
-    <p class="subtitle">Overview of your attendance agent</p>
-    <div class="stats" id="dash-stats">
-      <div class="stat-card"><div class="stat-label">Devices</div><div class="stat-value accent" id="stat-devices">—</div></div>
-      <div class="stat-card"><div class="stat-label">Total Records</div><div class="stat-value" id="stat-total">—</div></div>
-      <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value success" id="stat-today">—</div></div>
-      <div class="stat-card"><div class="stat-label">Unsynced</div><div class="stat-value warn" id="stat-unsynced">—</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-      <div class="card">
-        <div class="card-header"><span class="card-title">Recent Sync Runs</span></div>
-        <div id="dash-syncs"></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Recent Logs</span></div>
-        <div id="dash-logs" style="max-height:260px;overflow-y:auto"></div>
-      </div>
-    </div>
-    <div class="card" style="margin-top:0">
-      <div class="card-header">
-        <span class="card-title">Quick Actions</span>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn btn-primary" onclick="triggerSync()">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.13-3.36M20 15a9 9 0 01-14.13 3.36"/></svg>
-          Sync Now
+        <div class="card">
+          <h2>Sync Mode</h2>
+          <div class="form-group">
+            <label>How should attendance be synced to the ERP?</label>
+            <select id="ob-sync-mode">
+              <option value="timely">
+                Timely — sync every few seconds (recommended)
+              </option>
+              <option value="manual">
+                Manual — only sync when I click "Sync Now"
+              </option>
+              <option value="realtime">
+                Realtime — ERP pushes sync over WebSocket
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <button
+          class="btn btn-primary"
+          style="width: 100%; justify-content: center; padding: 12px"
+          onclick="finishOnboarding()"
+        >
+          Finish Setup
         </button>
-        <button class="btn btn-secondary" onclick="navigate('devices')">Manage Devices</button>
-        <button class="btn btn-secondary" onclick="navigate('attendance')">View Attendance</button>
+        <p
+          style="
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 14px;
+          "
+        >
+          You can change these and add devices later from Settings and Devices.
+        </p>
       </div>
     </div>
-  </div>
 
-  <!-- Devices -->
-  <div class="page" id="page-devices">
-    <div class="section-header">
-      <div><h1>Devices</h1><p class="subtitle">Manage fingerprint/card reader devices</p></div>
-      <button class="btn btn-primary" onclick="openAddDevice()">+ Add Device</button>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table id="devices-table">
-          <thead><tr>
-            <th>Name</th><th>Type</th><th>IP / Serial</th><th>Port</th>
-            <th>Last Seen</th><th>Status</th><th>Actions</th>
-          </tr></thead>
-          <tbody id="devices-body"></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="card">
-      <h2 style="font-size:13px;color:var(--muted)">ADMS Device Setup</h2>
-      <p style="font-size:13px;color:var(--muted);line-height:1.6">
-        For ADMS devices, configure the device's server address to point to this machine's IP on port
-        <code style="background:var(--surface2);padding:2px 6px;border-radius:4px" id="adms-port-display">5836</code>.
-        The path should be <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">/iclock/cdata</code>.
-        The device will automatically register itself on first contact.
-      </p>
-    </div>
-  </div>
+    <!-- App -->
+    <div id="app-shell" style="display: none">
+      <aside id="sidebar">
+        <div class="brand">
+          ZK Agent<span id="agent-name-display">Loading…</span>
+        </div>
+        <nav>
+          <a class="active" data-page="dashboard">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span>Dashboard</span>
+          </a>
+          <a data-page="devices">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <circle cx="12" cy="17" r="1" />
+            </svg>
+            <span>Devices</span>
+          </a>
+          <a data-page="attendance">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            <span>Attendance</span>
+          </a>
+          <a data-page="sync">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.13-3.36M20 15a9 9 0 01-14.13 3.36"
+              />
+            </svg>
+            <span>Sync</span>
+          </a>
+          <a data-page="logs">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <path d="M4 6h16M4 10h16M4 14h10M4 18h6" />
+            </svg>
+            <span>Logs</span>
+          </a>
+          <a data-page="settings">
+            <svg
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+              />
+            </svg>
+            <span>Settings</span>
+          </a>
+        </nav>
+        <div class="sync-status">
+          <span class="dot" id="auto-sync-dot"></span>
+          <span id="auto-sync-label">Auto-sync off</span>
+        </div>
+      </aside>
 
-  <!-- Attendance -->
-  <div class="page" id="page-attendance">
-    <div class="section-header">
-      <div><h1>Attendance Records</h1><p class="subtitle">All punch-in/out logs collected from devices</p></div>
-      <div style="display:flex;gap:8px">
-        <select id="att-filter-synced" onchange="loadAttendance()" style="width:130px">
-          <option value="">All Records</option>
-          <option value="false">Unsynced Only</option>
-          <option value="true">Synced Only</option>
-        </select>
-        <button class="btn btn-secondary btn-sm" onclick="loadAttendance()">↻ Refresh</button>
-      </div>
-    </div>
-    <div class="stats" style="grid-template-columns:repeat(3,1fr)">
-      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value" id="att-total">—</div></div>
-      <div class="stat-card"><div class="stat-label">Today</div><div class="stat-value success" id="att-today">—</div></div>
-      <div class="stat-card"><div class="stat-label">Unsynced</div><div class="stat-value warn" id="att-unsynced">—</div></div>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>User ID</th><th>Timestamp</th><th>Device</th>
-            <th>Status</th><th>Punch</th><th>Synced</th>
-          </tr></thead>
-          <tbody id="attendance-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+      <!-- Main content -->
+      <main id="main">
+        <!-- Dashboard -->
+        <div class="page active" id="page-dashboard">
+          <h1>Dashboard</h1>
+          <p class="subtitle">Overview of your attendance agent</p>
+          <div class="stats" id="dash-stats">
+            <div class="stat-card">
+              <div class="stat-label">Devices</div>
+              <div class="stat-value accent" id="stat-devices">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Total Records</div>
+              <div class="stat-value" id="stat-total">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Today</div>
+              <div class="stat-value success" id="stat-today">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Unsynced</div>
+              <div class="stat-value warn" id="stat-unsynced">—</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px">
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">Recent Sync Runs</span>
+              </div>
+              <div id="dash-syncs"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <span class="card-title">Recent Logs</span>
+              </div>
+              <div
+                id="dash-logs"
+                style="max-height: 260px; overflow-y: auto"
+              ></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 0">
+            <div class="card-header">
+              <span class="card-title">Quick Actions</span>
+            </div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap">
+              <button class="btn btn-primary" onclick="triggerSync()">
+                <svg
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0114.13-3.36M20 15a9 9 0 01-14.13 3.36"
+                  />
+                </svg>
+                Sync Now
+              </button>
+              <button class="btn btn-secondary" onclick="navigate('devices')">
+                Manage Devices
+              </button>
+              <button
+                class="btn btn-secondary"
+                onclick="navigate('attendance')"
+              >
+                View Attendance
+              </button>
+            </div>
+          </div>
+        </div>
 
-  <!-- Sync -->
-  <div class="page" id="page-sync">
-    <h1>ERP Sync</h1>
-    <p class="subtitle">Push attendance records to BetterSchool ERP</p>
+        <!-- Devices -->
+        <div class="page" id="page-devices">
+          <div class="section-header">
+            <div>
+              <h1>Devices</h1>
+              <p class="subtitle">Manage fingerprint/card reader devices</p>
+            </div>
+            <button class="btn btn-primary" onclick="openAddDevice()">
+              + Add Device
+            </button>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table id="devices-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Type</th>
+                    <th>IP / Serial</th>
+                    <th>Port</th>
+                    <th>Last Seen</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="devices-body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <h2 style="font-size: 13px; color: var(--muted)">
+              ADMS Device Setup
+            </h2>
+            <p style="font-size: 13px; color: var(--muted); line-height: 1.6">
+              For ADMS devices, configure the device's server address to point
+              to this machine's IP on port
+              <code
+                style="
+                  background: var(--surface2);
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                "
+                id="adms-port-display"
+                >5836</code
+              >. The path should be
+              <code
+                style="
+                  background: var(--surface2);
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                "
+                >/iclock/cdata</code
+              >. The device will automatically register itself on first contact.
+            </p>
+          </div>
+        </div>
 
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Auto-Sync</span>
-        <div style="display:flex;align-items:center;gap:12px">
-          <span id="auto-sync-status-text" style="font-size:13px;color:var(--muted)"></span>
-          <label class="toggle">
-            <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync()">
-            <span class="toggle-slider"></span>
-          </label>
+        <!-- Attendance -->
+        <div class="page" id="page-attendance">
+          <div class="section-header">
+            <div>
+              <h1>Attendance Records</h1>
+              <p class="subtitle">
+                All punch-in/out logs collected from devices
+              </p>
+            </div>
+            <div style="display: flex; gap: 8px">
+              <select
+                id="att-filter-synced"
+                onchange="loadAttendance()"
+                style="width: 130px"
+              >
+                <option value="">All Records</option>
+                <option value="false">Unsynced Only</option>
+                <option value="true">Synced Only</option>
+              </select>
+              <button
+                class="btn btn-secondary btn-sm"
+                onclick="loadAttendance()"
+              >
+                ↻ Refresh
+              </button>
+            </div>
+          </div>
+          <div class="stats" style="grid-template-columns: repeat(3, 1fr)">
+            <div class="stat-card">
+              <div class="stat-label">Total</div>
+              <div class="stat-value" id="att-total">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Today</div>
+              <div class="stat-value success" id="att-today">—</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Unsynced</div>
+              <div class="stat-value warn" id="att-unsynced">—</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>User ID</th>
+                    <th>Timestamp</th>
+                    <th>Device</th>
+                    <th>Status</th>
+                    <th>Punch</th>
+                    <th>Synced</th>
+                  </tr>
+                </thead>
+                <tbody id="attendance-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sync -->
+        <div class="page" id="page-sync">
+          <h1>ERP Sync</h1>
+          <p class="subtitle">Push attendance records to BetterSchool ERP</p>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Auto-Sync</span>
+              <div style="display: flex; align-items: center; gap: 12px">
+                <span
+                  id="auto-sync-status-text"
+                  style="font-size: 13px; color: var(--muted)"
+                ></span>
+                <label class="toggle">
+                  <input
+                    type="checkbox"
+                    id="auto-sync-toggle"
+                    onchange="toggleAutoSync()"
+                  />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            </div>
+            <p style="font-size: 13px; color: var(--muted)">
+              When enabled, the agent will automatically push unsynced records
+              to the ERP every
+              <strong id="interval-display">60</strong> seconds. Change the
+              interval in Settings.
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Manual Sync</span>
+              <button
+                class="btn btn-primary"
+                id="sync-btn"
+                onclick="triggerSync()"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M4 4v5h5M20 20v-5h-5" />
+                </svg>
+                Sync Now
+              </button>
+            </div>
+            <div id="sync-result" style="font-size: 13px; color: var(--muted)">
+              Click "Sync Now" to push all unsynced records to the ERP.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Sync History</span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Started</th>
+                    <th>Finished</th>
+                    <th>Total</th>
+                    <th>Pushed</th>
+                    <th>Failed</th>
+                    <th>Status</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody id="sync-history-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logs -->
+        <div class="page" id="page-logs">
+          <div class="section-header">
+            <div>
+              <h1>Agent Logs</h1>
+              <p class="subtitle">Last 100 entries from the internal log</p>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadLogs()">
+              ↻ Refresh
+            </button>
+          </div>
+          <div class="card" style="padding: 0">
+            <div
+              id="logs-container"
+              style="
+                max-height: 600px;
+                overflow-y: auto;
+                font-family: monospace;
+              "
+            ></div>
+          </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="page" id="page-settings">
+          <h1>Settings</h1>
+          <p class="subtitle">Agent and ERP configuration</p>
+
+          <div
+            class="card"
+            id="restart-banner"
+            style="display: none; border-color: var(--warn)"
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 16px;
+              "
+            >
+              <div style="font-size: 13px; color: var(--warn)">
+                Some changes require an agent restart to take effect.
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="restartAgent()">
+                Restart Agent Now
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Agent</h2>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Agent Name</label>
+                <input
+                  type="text"
+                  id="s-agent-name"
+                  placeholder="My School Attendance Agent"
+                />
+              </div>
+              <div class="form-group">
+                <label>Log Level</label>
+                <select id="s-log-level">
+                  <option value="DEBUG">DEBUG</option>
+                  <option value="INFO">INFO</option>
+                  <option value="WARNING">WARNING</option>
+                  <option value="ERROR">ERROR</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label
+                  >ADMS Port (device push receiver) — restart required</label
+                >
+                <input type="number" id="s-adms-port" />
+              </div>
+              <div class="form-group">
+                <label>Web UI Port — restart required</label>
+                <input type="number" id="s-web-port" />
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>ERP Connection</h2>
+            <div class="form-group">
+              <label>ERP Base URL</label>
+              <input
+                type="url"
+                id="s-erp-url"
+                placeholder="https://api.yourerp.com"
+              />
+            </div>
+            <div class="form-group">
+              <label>API Token</label>
+              <input
+                type="password"
+                id="s-erp-token"
+                placeholder="Leave blank to keep existing token"
+              />
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 6px">
+              <button class="btn btn-secondary btn-sm" onclick="testErp()">
+                Test Connection
+              </button>
+              <span
+                id="erp-test-result"
+                style="font-size: 12px; line-height: 32px; color: var(--muted)"
+              ></span>
+            </div>
+          </div>
+
+          <div class="card">
+            <h2>Sync</h2>
+            <div class="form-row-3">
+              <div class="form-group">
+                <label>Sync Mode</label>
+                <select id="s-sync-mode">
+                  <option value="manual">Manual</option>
+                  <option value="timely">Timely (interval)</option>
+                  <option value="realtime">Realtime (WebSocket)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Auto-sync Interval (seconds)</label>
+                <input type="number" id="s-interval" min="10" />
+              </div>
+              <div class="form-group">
+                <label>Batch Size (records per push)</label>
+                <input type="number" id="s-batch" min="1" max="1000" />
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="saveSettings()">
+            Save Settings
+          </button>
+        </div>
+      </main>
+
+      <!-- Add/Edit Device Modal -->
+      <div class="modal-overlay" id="device-modal">
+        <div class="modal">
+          <div class="modal-title" id="device-modal-title">Add Device</div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Device Name *</label>
+              <input type="text" id="d-name" placeholder="Main Entrance" />
+            </div>
+            <div class="form-group">
+              <label>Type *</label>
+              <select id="d-type" onchange="onTypeChange()">
+                <option value="sdk">SDK (LAN/TCP)</option>
+                <option value="adms">ADMS (WiFi Push)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="sdk-fields">
+            <div class="form-row">
+              <div class="form-group">
+                <label>IP Address *</label>
+                <input type="text" id="d-ip" placeholder="192.168.1.100" />
+              </div>
+              <div class="form-group">
+                <label>Port</label>
+                <input type="number" id="d-port" value="4370" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Password (0 if none)</label>
+                <input type="number" id="d-password" value="0" />
+              </div>
+              <div class="form-group">
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                  "
+                >
+                  <input type="checkbox" id="d-force-udp" style="width: auto" />
+                  Force UDP
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    margin-top: 8px;
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    id="d-omit-ping"
+                    checked
+                    style="width: auto"
+                  />
+                  Omit ping (recommended)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div id="adms-fields" style="display: none">
+            <div class="form-group">
+              <label
+                >Serial Number (optional — auto-detected on first push)</label
+              >
+              <input type="text" id="d-serial" placeholder="e.g. ABCDE12345" />
+            </div>
+            <div
+              style="
+                background: var(--surface2);
+                border-radius: 7px;
+                padding: 12px;
+                font-size: 12px;
+                color: var(--muted);
+                line-height: 1.6;
+              "
+            >
+              Configure the device's server URL to:
+              <code style="color: var(--accent)" id="adms-hint-url"
+                >http://&lt;this-machine-ip&gt;:5836/iclock/cdata</code
+              ><br />
+              The device will appear here automatically after its first
+              check-in.
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              class="btn btn-secondary"
+              onclick="closeModal('device-modal')"
+            >
+              Cancel
+            </button>
+            <button
+              class="btn btn-primary"
+              id="device-save-btn"
+              onclick="saveDevice()"
+            >
+              Add Device
+            </button>
+          </div>
         </div>
       </div>
-      <p style="font-size:13px;color:var(--muted)">
-        When enabled, the agent will automatically push unsynced records to the ERP every
-        <strong id="interval-display">60</strong> seconds.
-        Change the interval in Settings.
-      </p>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Manual Sync</span>
-        <button class="btn btn-primary" id="sync-btn" onclick="triggerSync()">
-          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4v5h5M20 20v-5h-5"/></svg>
-          Sync Now
-        </button>
-      </div>
-      <div id="sync-result" style="font-size:13px;color:var(--muted)">Click "Sync Now" to push all unsynced records to the ERP.</div>
-    </div>
+    <div id="toast"></div>
 
-    <div class="card">
-      <div class="card-header"><span class="card-title">Sync History</span></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Started</th><th>Finished</th><th>Total</th><th>Pushed</th><th>Failed</th><th>Status</th><th>Message</th>
-          </tr></thead>
-          <tbody id="sync-history-body"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
+    <script>
+      // ── State ─────────────────────────────────────────────────
+      let _editingDeviceId = null;
+      let _devices = [];
+      let _autoSync = false;
 
-  <!-- Logs -->
-  <div class="page" id="page-logs">
-    <div class="section-header">
-      <div><h1>Agent Logs</h1><p class="subtitle">Last 100 entries from the internal log</p></div>
-      <button class="btn btn-secondary btn-sm" onclick="loadLogs()">↻ Refresh</button>
-    </div>
-    <div class="card" style="padding:0">
-      <div id="logs-container" style="max-height:600px;overflow-y:auto;font-family:monospace"></div>
-    </div>
-  </div>
+      // ── Navigation ────────────────────────────────────────────
+      function navigate(page) {
+        document
+          .querySelectorAll(".page")
+          .forEach((p) => p.classList.remove("active"));
+        document
+          .querySelectorAll("#sidebar nav a")
+          .forEach((a) => a.classList.remove("active"));
+        document.getElementById("page-" + page).classList.add("active");
+        document.querySelector(`[data-page="${page}"]`).classList.add("active");
 
-  <!-- Settings -->
-  <div class="page" id="page-settings">
-    <h1>Settings</h1>
-    <p class="subtitle">Agent and ERP configuration</p>
+        const loaders = {
+          dashboard: loadDashboard,
+          devices: loadDevices,
+          attendance: loadAttendance,
+          sync: loadSync,
+          logs: loadLogs,
+          settings: loadSettings,
+        };
+        if (loaders[page]) loaders[page]();
+      }
 
-    <div class="card">
-      <h2>Agent</h2>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Agent Name</label>
-          <input type="text" id="s-agent-name" placeholder="My School Attendance Agent">
-        </div>
-        <div class="form-group">
-          <label>ADMS Port (device push receiver)</label>
-          <input type="number" id="s-adms-port">
-        </div>
-      </div>
-    </div>
+      document.querySelectorAll("#sidebar nav a[data-page]").forEach((a) => {
+        a.addEventListener("click", () => navigate(a.dataset.page));
+      });
 
-    <div class="card">
-      <h2>ERP Connection</h2>
-      <div class="form-group">
-        <label>ERP Base URL</label>
-        <input type="url" id="s-erp-url" placeholder="https://api.yourerp.com">
-      </div>
-      <div class="form-group">
-        <label>API Token</label>
-        <input type="password" id="s-erp-token" placeholder="Leave blank to keep existing token">
-      </div>
-      <div style="display:flex;gap:10px;margin-top:6px">
-        <button class="btn btn-secondary btn-sm" onclick="testErp()">Test Connection</button>
-        <span id="erp-test-result" style="font-size:12px;line-height:32px;color:var(--muted)"></span>
-      </div>
-    </div>
+      // ── Toast ─────────────────────────────────────────────────
+      function toast(msg, type = "") {
+        const t = document.getElementById("toast");
+        t.textContent = msg;
+        t.className = "show " + type;
+        clearTimeout(t._timer);
+        t._timer = setTimeout(() => (t.className = ""), 3000);
+      }
 
-    <div class="card">
-      <h2>Sync</h2>
-      <div class="form-row-3">
-        <div class="form-group">
-          <label>Auto-sync Interval (seconds)</label>
-          <input type="number" id="s-interval" min="10">
-        </div>
-        <div class="form-group">
-          <label>Batch Size (records per push)</label>
-          <input type="number" id="s-batch" min="1" max="1000">
-        </div>
-      </div>
-    </div>
+      // ── API ───────────────────────────────────────────────────
+      async function api(method, path, body) {
+        const opts = {
+          method,
+          headers: { "Content-Type": "application/json" },
+        };
+        if (body) opts.body = JSON.stringify(body);
+        const r = await fetch("/api" + path, opts);
+        return r.json();
+      }
 
-    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-  </div>
+      // ── Dashboard ─────────────────────────────────────────────
+      async function loadDashboard() {
+        const d = await api("GET", "/dashboard");
+        document.getElementById("agent-name-display").textContent =
+          d.agent_name;
+        document.getElementById("stat-devices").textContent = d.device_count;
+        document.getElementById("stat-total").textContent = d.attendance.total;
+        document.getElementById("stat-today").textContent = d.attendance.today;
+        document.getElementById("stat-unsynced").textContent =
+          d.attendance.unsynced;
+        document.getElementById("adms-port-display").textContent = d.adms_port;
+        document.getElementById("interval-display").textContent = d.interval;
 
-</main>
+        _autoSync = d.auto_sync;
+        updateAutoSyncUI();
 
-<!-- Add/Edit Device Modal -->
-<div class="modal-overlay" id="device-modal">
-  <div class="modal">
-    <div class="modal-title" id="device-modal-title">Add Device</div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label>Device Name *</label>
-        <input type="text" id="d-name" placeholder="Main Entrance">
-      </div>
-      <div class="form-group">
-        <label>Type *</label>
-        <select id="d-type" onchange="onTypeChange()">
-          <option value="sdk">SDK (LAN/TCP)</option>
-          <option value="adms">ADMS (WiFi Push)</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="sdk-fields">
-      <div class="form-row">
-        <div class="form-group">
-          <label>IP Address *</label>
-          <input type="text" id="d-ip" placeholder="192.168.1.100">
-        </div>
-        <div class="form-group">
-          <label>Port</label>
-          <input type="number" id="d-port" value="4370">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Password (0 if none)</label>
-          <input type="number" id="d-password" value="0">
-        </div>
-        <div class="form-group">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" id="d-force-udp" style="width:auto">
-            Force UDP
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px">
-            <input type="checkbox" id="d-omit-ping" checked style="width:auto">
-            Omit ping (recommended)
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <div id="adms-fields" style="display:none">
-      <div class="form-group">
-        <label>Serial Number (optional — auto-detected on first push)</label>
-        <input type="text" id="d-serial" placeholder="e.g. ABCDE12345">
-      </div>
-      <div style="background:var(--surface2);border-radius:7px;padding:12px;font-size:12px;color:var(--muted);line-height:1.6">
-        Configure the device's server URL to:
-        <code style="color:var(--accent)" id="adms-hint-url">http://&lt;this-machine-ip&gt;:5836/iclock/cdata</code><br>
-        The device will appear here automatically after its first check-in.
-      </div>
-    </div>
-
-    <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="closeModal('device-modal')">Cancel</button>
-      <button class="btn btn-primary" id="device-save-btn" onclick="saveDevice()">Add Device</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<script>
-// ── State ─────────────────────────────────────────────────
-let _editingDeviceId = null;
-let _devices = [];
-let _autoSync = false;
-
-// ── Navigation ────────────────────────────────────────────
-function navigate(page) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
-  document.getElementById('page-' + page).classList.add('active');
-  document.querySelector(`[data-page="${page}"]`).classList.add('active');
-
-  const loaders = {
-    dashboard:  loadDashboard,
-    devices:    loadDevices,
-    attendance: loadAttendance,
-    sync:       loadSync,
-    logs:       loadLogs,
-    settings:   loadSettings,
-  };
-  if (loaders[page]) loaders[page]();
-}
-
-document.querySelectorAll('#sidebar nav a[data-page]').forEach(a => {
-  a.addEventListener('click', () => navigate(a.dataset.page));
-});
-
-// ── Toast ─────────────────────────────────────────────────
-function toast(msg, type = '') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + type;
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.className = '', 3000);
-}
-
-// ── API ───────────────────────────────────────────────────
-async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch('/api' + path, opts);
-  return r.json();
-}
-
-// ── Dashboard ─────────────────────────────────────────────
-async function loadDashboard() {
-  const d = await api('GET', '/dashboard');
-  document.getElementById('agent-name-display').textContent = d.agent_name;
-  document.getElementById('stat-devices').textContent  = d.device_count;
-  document.getElementById('stat-total').textContent    = d.attendance.total;
-  document.getElementById('stat-today').textContent    = d.attendance.today;
-  document.getElementById('stat-unsynced').textContent = d.attendance.unsynced;
-  document.getElementById('adms-port-display').textContent = d.adms_port;
-  document.getElementById('interval-display').textContent = d.interval;
-
-  _autoSync = d.auto_sync;
-  updateAutoSyncUI();
-
-  // Recent syncs
-  const sb = document.getElementById('dash-syncs');
-  if (!d.recent_syncs.length) {
-    sb.innerHTML = '<div class="empty" style="padding:20px"><p>No sync runs yet</p></div>';
-  } else {
-    sb.innerHTML = d.recent_syncs.map(s => `
+        // Recent syncs
+        const sb = document.getElementById("dash-syncs");
+        if (!d.recent_syncs.length) {
+          sb.innerHTML =
+            '<div class="empty" style="padding:20px"><p>No sync runs yet</p></div>';
+        } else {
+          sb.innerHTML = d.recent_syncs
+            .map(
+              (s) => `
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
         <div style="font-size:12px">
           <div>${s.started_at}</div>
-          <div style="color:var(--muted)">${s.message || ''}</div>
+          <div style="color:var(--muted)">${s.message || ""}</div>
         </div>
         <div style="text-align:right">
           <span class="badge badge-${s.status}">${s.status}</span>
           <div style="font-size:11px;color:var(--muted);margin-top:3px">${s.pushed}/${s.total}</div>
         </div>
-      </div>`).join('');
-  }
+      </div>`,
+            )
+            .join("");
+        }
 
-  // Recent logs
-  const lb = document.getElementById('dash-logs');
-  lb.innerHTML = d.recent_logs.slice(0, 12).map(l => `
+        // Recent logs
+        const lb = document.getElementById("dash-logs");
+        lb.innerHTML =
+          d.recent_logs
+            .slice(0, 12)
+            .map(
+              (l) => `
     <div class="log-entry ${l.level}">
       <span class="ts">${l.ts.slice(11, 19)}</span>
       <span class="lvl">[${l.level}]</span> ${escHtml(l.message)}
-    </div>`).join('') || '<div style="padding:16px;color:var(--muted);font-size:12px">No logs yet</div>';
-}
+    </div>`,
+            )
+            .join("") ||
+          '<div style="padding:16px;color:var(--muted);font-size:12px">No logs yet</div>';
+      }
 
-// ── Devices ───────────────────────────────────────────────
-async function loadDevices() {
-  _devices = await api('GET', '/devices');
-  const cfg = await api('GET', '/config');
-  document.getElementById('adms-port-display').textContent = cfg.agent.adms_port;
+      // ── Devices ───────────────────────────────────────────────
+      async function loadDevices() {
+        _devices = await api("GET", "/devices");
+        const cfg = await api("GET", "/config");
+        document.getElementById("adms-port-display").textContent =
+          cfg.agent.adms_port;
 
-  const tb = document.getElementById('devices-body');
-  if (!_devices.length) {
-    tb.innerHTML = `<tr><td colspan="7"><div class="empty"><p>No devices yet — click "Add Device"</p></div></td></tr>`;
-    return;
-  }
+        const tb = document.getElementById("devices-body");
+        if (!_devices.length) {
+          tb.innerHTML = `<tr><td colspan="7"><div class="empty"><p>No devices yet — click "Add Device"</p></div></td></tr>`;
+          return;
+        }
 
-  tb.innerHTML = _devices.map(d => `
+        tb.innerHTML = _devices
+          .map(
+            (d) => `
     <tr>
       <td><strong>${escHtml(d.name)}</strong></td>
       <td><span class="badge badge-${d.type}">${d.type.toUpperCase()}</span></td>
-      <td style="font-family:monospace;font-size:12px">${escHtml(d.ip || '')}${d.serial ? `<br><span style="color:var(--muted)">S/N: ${d.serial}</span>` : ''}</td>
-      <td>${d.type === 'sdk' ? d.port : '—'}</td>
-      <td style="font-size:12px;color:var(--muted)">${d.last_seen ? d.last_seen.slice(0, 16) : 'Never'}</td>
-      <td><span class="badge ${d.enabled ? 'badge-online' : 'badge-offline'}">${d.enabled ? 'Enabled' : 'Disabled'}</span></td>
+      <td style="font-family:monospace;font-size:12px">${escHtml(d.ip || "")}${d.serial ? `<br><span style="color:var(--muted)">S/N: ${d.serial}</span>` : ""}</td>
+      <td>${d.type === "sdk" ? d.port : "—"}</td>
+      <td style="font-size:12px;color:var(--muted)">${d.last_seen ? d.last_seen.slice(0, 16) : "Never"}</td>
+      <td><span class="badge ${d.enabled ? "badge-online" : "badge-offline"}">${d.enabled ? "Enabled" : "Disabled"}</span></td>
       <td>
         <div class="actions">
-          ${d.type === 'sdk' ? `<button class="btn btn-secondary btn-sm" onclick="testDevice(${d.id})">Test</button>
-          <button class="btn btn-secondary btn-sm" onclick="pullDevice(${d.id})">Pull</button>` : ''}
+          ${
+            d.type === "sdk"
+              ? `<button class="btn btn-secondary btn-sm" onclick="testDevice(${d.id})">Test</button>
+          <button class="btn btn-secondary btn-sm" onclick="pullDevice(${d.id})">Pull</button>`
+              : ""
+          }
           <button class="btn btn-secondary btn-sm" onclick="openEditDevice(${d.id})">Edit</button>
           <button class="btn btn-danger btn-sm" onclick="deleteDevice(${d.id})">Remove</button>
         </div>
       </td>
-    </tr>`).join('');
-}
+    </tr>`,
+          )
+          .join("");
+      }
 
-function openAddDevice() {
-  _editingDeviceId = null;
-  document.getElementById('device-modal-title').textContent = 'Add Device';
-  document.getElementById('device-save-btn').textContent = 'Add Device';
-  document.getElementById('d-name').value = '';
-  document.getElementById('d-type').value = 'sdk';
-  document.getElementById('d-ip').value = '';
-  document.getElementById('d-port').value = '4370';
-  document.getElementById('d-password').value = '0';
-  document.getElementById('d-serial').value = '';
-  document.getElementById('d-force-udp').checked = false;
-  document.getElementById('d-omit-ping').checked = true;
-  onTypeChange();
-  document.getElementById('device-modal').classList.add('open');
-}
+      function openAddDevice() {
+        _editingDeviceId = null;
+        document.getElementById("device-modal-title").textContent =
+          "Add Device";
+        document.getElementById("device-save-btn").textContent = "Add Device";
+        document.getElementById("d-name").value = "";
+        document.getElementById("d-type").value = "sdk";
+        document.getElementById("d-ip").value = "";
+        document.getElementById("d-port").value = "4370";
+        document.getElementById("d-password").value = "0";
+        document.getElementById("d-serial").value = "";
+        document.getElementById("d-force-udp").checked = false;
+        document.getElementById("d-omit-ping").checked = true;
+        onTypeChange();
+        document.getElementById("device-modal").classList.add("open");
+      }
 
-function openEditDevice(id) {
-  const d = _devices.find(x => x.id === id);
-  if (!d) return;
-  _editingDeviceId = id;
-  document.getElementById('device-modal-title').textContent = 'Edit Device';
-  document.getElementById('device-save-btn').textContent = 'Save Changes';
-  document.getElementById('d-name').value      = d.name || '';
-  document.getElementById('d-type').value      = d.type;
-  document.getElementById('d-ip').value        = d.ip || '';
-  document.getElementById('d-port').value      = d.port || 4370;
-  document.getElementById('d-password').value  = d.password || 0;
-  document.getElementById('d-serial').value    = d.serial || '';
-  document.getElementById('d-force-udp').checked = !!d.force_udp;
-  document.getElementById('d-omit-ping').checked  = !!d.omit_ping;
-  onTypeChange();
-  document.getElementById('device-modal').classList.add('open');
-}
+      function openEditDevice(id) {
+        const d = _devices.find((x) => x.id === id);
+        if (!d) return;
+        _editingDeviceId = id;
+        document.getElementById("device-modal-title").textContent =
+          "Edit Device";
+        document.getElementById("device-save-btn").textContent = "Save Changes";
+        document.getElementById("d-name").value = d.name || "";
+        document.getElementById("d-type").value = d.type;
+        document.getElementById("d-ip").value = d.ip || "";
+        document.getElementById("d-port").value = d.port || 4370;
+        document.getElementById("d-password").value = d.password || 0;
+        document.getElementById("d-serial").value = d.serial || "";
+        document.getElementById("d-force-udp").checked = !!d.force_udp;
+        document.getElementById("d-omit-ping").checked = !!d.omit_ping;
+        onTypeChange();
+        document.getElementById("device-modal").classList.add("open");
+      }
 
-function onTypeChange() {
-  const t = document.getElementById('d-type').value;
-  document.getElementById('sdk-fields').style.display  = t === 'sdk'  ? '' : 'none';
-  document.getElementById('adms-fields').style.display = t === 'adms' ? '' : 'none';
-}
+      function onTypeChange() {
+        const t = document.getElementById("d-type").value;
+        document.getElementById("sdk-fields").style.display =
+          t === "sdk" ? "" : "none";
+        document.getElementById("adms-fields").style.display =
+          t === "adms" ? "" : "none";
+      }
 
-async function saveDevice() {
-  const name = document.getElementById('d-name').value.trim();
-  const type = document.getElementById('d-type').value;
-  if (!name) { toast('Device name is required', 'error'); return; }
+      async function saveDevice() {
+        const name = document.getElementById("d-name").value.trim();
+        const type = document.getElementById("d-type").value;
+        if (!name) {
+          toast("Device name is required", "error");
+          return;
+        }
 
-  const payload = {
-    name, type,
-    ip:        document.getElementById('d-ip').value.trim(),
-    port:      parseInt(document.getElementById('d-port').value) || 4370,
-    password:  parseInt(document.getElementById('d-password').value) || 0,
-    serial:    document.getElementById('d-serial').value.trim(),
-    force_udp: document.getElementById('d-force-udp').checked ? 1 : 0,
-    omit_ping: document.getElementById('d-omit-ping').checked ? 1 : 0,
-  };
+        const payload = {
+          name,
+          type,
+          ip: document.getElementById("d-ip").value.trim(),
+          port: parseInt(document.getElementById("d-port").value) || 4370,
+          password: parseInt(document.getElementById("d-password").value) || 0,
+          serial: document.getElementById("d-serial").value.trim(),
+          force_udp: document.getElementById("d-force-udp").checked ? 1 : 0,
+          omit_ping: document.getElementById("d-omit-ping").checked ? 1 : 0,
+        };
 
-  let result;
-  if (_editingDeviceId) {
-    result = await api('PUT', `/devices/${_editingDeviceId}`, payload);
-  } else {
-    result = await api('POST', '/devices', payload);
-  }
+        let result;
+        if (_editingDeviceId) {
+          result = await api("PUT", `/devices/${_editingDeviceId}`, payload);
+        } else {
+          result = await api("POST", "/devices", payload);
+        }
 
-  if (result.error) { toast(result.error, 'error'); return; }
-  toast(_editingDeviceId ? 'Device updated' : 'Device added', 'success');
-  closeModal('device-modal');
-  loadDevices();
-}
+        if (result.error) {
+          toast(result.error, "error");
+          return;
+        }
+        toast(_editingDeviceId ? "Device updated" : "Device added", "success");
+        closeModal("device-modal");
+        loadDevices();
+      }
 
-async function testDevice(id) {
-  toast('Testing connection…');
-  const r = await api('POST', `/devices/${id}/test`);
-  if (r.connected) {
-    toast(`Connected ✓ — FW: ${r.firmware || '?'} | Users: ${r.users} | Records: ${r.records}`, 'success');
-  } else {
-    toast(`Connection failed: ${r.error}`, 'error');
-  }
-}
+      async function testDevice(id) {
+        toast("Testing connection…");
+        const r = await api("POST", `/devices/${id}/test`);
+        if (r.connected) {
+          toast(
+            `Connected ✓ — FW: ${r.firmware || "?"} | Users: ${r.users} | Records: ${r.records}`,
+            "success",
+          );
+        } else {
+          toast(`Connection failed: ${r.error}`, "error");
+        }
+      }
 
-async function pullDevice(id) {
-  const d = _devices.find(x => x.id === id);
-  toast(`Pulling from ${d?.name || 'device'}…`);
-  const r = await api('POST', `/devices/${id}/pull`);
-  if (r.ok) {
-    toast(`Pulled — ${r.inserted} new record(s)`, 'success');
-  } else {
-    toast(`Pull failed: ${r.error}`, 'error');
-  }
-}
+      async function pullDevice(id) {
+        const d = _devices.find((x) => x.id === id);
+        toast(`Pulling from ${d?.name || "device"}…`);
+        const r = await api("POST", `/devices/${id}/pull`);
+        if (r.ok) {
+          toast(`Pulled — ${r.inserted} new record(s)`, "success");
+        } else {
+          toast(`Pull failed: ${r.error}`, "error");
+        }
+      }
 
-async function deleteDevice(id) {
-  const d = _devices.find(x => x.id === id);
-  if (!confirm(`Remove device "${d?.name}"? This won't delete its attendance records.`)) return;
-  await api('DELETE', `/devices/${id}`);
-  toast('Device removed');
-  loadDevices();
-}
+      async function deleteDevice(id) {
+        const d = _devices.find((x) => x.id === id);
+        if (
+          !confirm(
+            `Remove device "${d?.name}"? This won't delete its attendance records.`,
+          )
+        )
+          return;
+        await api("DELETE", `/devices/${id}`);
+        toast("Device removed");
+        loadDevices();
+      }
 
-// ── Attendance ────────────────────────────────────────────
-async function loadAttendance() {
-  const synced = document.getElementById('att-filter-synced').value;
-  const params = synced ? `?synced=${synced}` : '';
-  const data = await api('GET', '/attendance' + params);
+      // ── Attendance ────────────────────────────────────────────
+      async function loadAttendance() {
+        const synced = document.getElementById("att-filter-synced").value;
+        const params = synced ? `?synced=${synced}` : "";
+        const data = await api("GET", "/attendance" + params);
 
-  document.getElementById('att-total').textContent    = data.stats.total;
-  document.getElementById('att-today').textContent    = data.stats.today;
-  document.getElementById('att-unsynced').textContent = data.stats.unsynced;
+        document.getElementById("att-total").textContent = data.stats.total;
+        document.getElementById("att-today").textContent = data.stats.today;
+        document.getElementById("att-unsynced").textContent =
+          data.stats.unsynced;
 
-  const tb = document.getElementById('attendance-body');
-  if (!data.records.length) {
-    tb.innerHTML = `<tr><td colspan="6"><div class="empty"><p>No records found</p></div></td></tr>`;
-    return;
-  }
+        const tb = document.getElementById("attendance-body");
+        if (!data.records.length) {
+          tb.innerHTML = `<tr><td colspan="6"><div class="empty"><p>No records found</p></div></td></tr>`;
+          return;
+        }
 
-  tb.innerHTML = data.records.map(r => `
+        tb.innerHTML = data.records
+          .map(
+            (r) => `
     <tr>
       <td><strong>${escHtml(r.user_id)}</strong></td>
       <td style="font-family:monospace;font-size:12px">${escHtml(r.timestamp)}</td>
-      <td>${escHtml(r.device_name || r.device_serial || '—')}</td>
+      <td>${escHtml(r.device_name || r.device_serial || "—")}</td>
       <td>${r.status}</td>
       <td>${punchLabel(r.punch)}</td>
-      <td><span class="badge ${r.synced ? 'badge-synced' : 'badge-pending'}">${r.synced ? 'Synced' : 'Pending'}</span></td>
-    </tr>`).join('');
-}
+      <td><span class="badge ${r.synced ? "badge-synced" : "badge-pending"}">${r.synced ? "Synced" : "Pending"}</span></td>
+    </tr>`,
+          )
+          .join("");
+      }
 
-function punchLabel(p) {
-  return {0:'Check-in', 1:'Check-out', 2:'Break-out', 3:'Break-in', 4:'OT-in', 5:'OT-out'}[p] || p;
-}
+      function punchLabel(p) {
+        return (
+          {
+            0: "Check-in",
+            1: "Check-out",
+            2: "Break-out",
+            3: "Break-in",
+            4: "OT-in",
+            5: "OT-out",
+          }[p] || p
+        );
+      }
 
-// ── Sync ──────────────────────────────────────────────────
-async function loadSync() {
-  const d = await api('GET', '/dashboard');
-  _autoSync = d.auto_sync;
-  document.getElementById('auto-sync-toggle').checked = _autoSync;
-  document.getElementById('auto-sync-status-text').textContent = _autoSync
-    ? `Running every ${d.interval}s`
-    : 'Disabled';
-  document.getElementById('interval-display').textContent = d.interval;
-  updateAutoSyncUI();
-  loadSyncHistory();
-}
+      // ── Sync ──────────────────────────────────────────────────
+      async function loadSync() {
+        const d = await api("GET", "/dashboard");
+        _autoSync = d.auto_sync;
+        document.getElementById("auto-sync-toggle").checked = _autoSync;
+        document.getElementById("auto-sync-status-text").textContent = _autoSync
+          ? `Running every ${d.interval}s`
+          : "Disabled";
+        document.getElementById("interval-display").textContent = d.interval;
+        updateAutoSyncUI();
+        loadSyncHistory();
+      }
 
-async function loadSyncHistory() {
-  const history = await api('GET', '/sync/history');
-  const tb = document.getElementById('sync-history-body');
-  if (!history.length) {
-    tb.innerHTML = `<tr><td colspan="7"><div class="empty"><p>No sync runs yet</p></div></td></tr>`;
-    return;
-  }
-  tb.innerHTML = history.map(s => `
+      async function loadSyncHistory() {
+        const history = await api("GET", "/sync/history");
+        const tb = document.getElementById("sync-history-body");
+        if (!history.length) {
+          tb.innerHTML = `<tr><td colspan="7"><div class="empty"><p>No sync runs yet</p></div></td></tr>`;
+          return;
+        }
+        tb.innerHTML = history
+          .map(
+            (s) => `
     <tr>
-      <td style="font-size:12px">${s.started_at || '—'}</td>
-      <td style="font-size:12px">${s.finished_at || '—'}</td>
+      <td style="font-size:12px">${s.started_at || "—"}</td>
+      <td style="font-size:12px">${s.finished_at || "—"}</td>
       <td>${s.total}</td>
       <td style="color:var(--success)">${s.pushed}</td>
       <td style="color:var(--error)">${s.failed}</td>
       <td><span class="badge badge-${s.status}">${s.status}</span></td>
-      <td style="font-size:12px;color:var(--muted)">${escHtml(s.message || '')}</td>
-    </tr>`).join('');
-}
+      <td style="font-size:12px;color:var(--muted)">${escHtml(s.message || "")}</td>
+    </tr>`,
+          )
+          .join("");
+      }
 
-async function toggleAutoSync() {
-  const r = await api('POST', '/sync/toggle');
-  _autoSync = r.auto_sync;
-  updateAutoSyncUI();
-  document.getElementById('auto-sync-toggle').checked = _autoSync;
-  toast(_autoSync ? 'Auto-sync enabled' : 'Auto-sync disabled', _autoSync ? 'success' : '');
-}
+      async function toggleAutoSync() {
+        const r = await api("POST", "/sync/toggle");
+        _autoSync = r.auto_sync;
+        updateAutoSyncUI();
+        document.getElementById("auto-sync-toggle").checked = _autoSync;
+        toast(
+          _autoSync ? "Auto-sync enabled" : "Auto-sync disabled",
+          _autoSync ? "success" : "",
+        );
+      }
 
-function updateAutoSyncUI() {
-  document.getElementById('auto-sync-dot').className = 'dot' + (_autoSync ? ' on' : '');
-  document.getElementById('auto-sync-label').textContent = _autoSync ? 'Auto-sync on' : 'Auto-sync off';
-}
+      function updateAutoSyncUI() {
+        document.getElementById("auto-sync-dot").className =
+          "dot" + (_autoSync ? " on" : "");
+        document.getElementById("auto-sync-label").textContent = _autoSync
+          ? "Auto-sync on"
+          : "Auto-sync off";
+      }
 
-async function triggerSync() {
-  const btn = document.getElementById('sync-btn');
-  const res = document.getElementById('sync-result');
-  if (btn) btn.disabled = true;
-  if (res) res.textContent = 'Syncing…';
-  toast('Syncing…');
+      async function triggerSync() {
+        const btn = document.getElementById("sync-btn");
+        const res = document.getElementById("sync-result");
+        if (btn) btn.disabled = true;
+        if (res) res.textContent = "Syncing…";
+        toast("Syncing…");
 
-  const r = await api('POST', '/sync');
-  if (btn) btn.disabled = false;
+        const r = await api("POST", "/sync");
+        if (btn) btn.disabled = false;
 
-  if (r.ok) {
-    const cmds = r.commands_executed ? ` Commands: ${r.commands_executed}.` : '';
-    const msg = `✓ Pushed ${r.pushed} record(s). SDK pulled: ${r.sdk_pulled}.${cmds} Errors: ${r.errors?.length || 0}`;
-    if (res) res.textContent = msg;
-    toast(msg, 'success');
-  } else {
-    const msg = `✗ Sync failed: ${r.error}`;
-    if (res) res.textContent = msg;
-    toast(msg, 'error');
-  }
-  loadSyncHistory();
-}
+        if (r.ok) {
+          const cmds = r.commands_executed
+            ? ` Commands: ${r.commands_executed}.`
+            : "";
+          const msg = `✓ Pushed ${r.pushed} record(s). SDK pulled: ${r.sdk_pulled}.${cmds} Errors: ${r.errors?.length || 0}`;
+          if (res) res.textContent = msg;
+          toast(msg, "success");
+        } else {
+          const msg = `✗ Sync failed: ${r.error}`;
+          if (res) res.textContent = msg;
+          toast(msg, "error");
+        }
+        loadSyncHistory();
+      }
 
-// ── Logs ──────────────────────────────────────────────────
-async function loadLogs() {
-  const logs = await api('GET', '/logs');
-  const c = document.getElementById('logs-container');
-  if (!logs.length) {
-    c.innerHTML = '<div style="padding:24px;color:var(--muted);text-align:center">No log entries yet</div>';
-    return;
-  }
-  c.innerHTML = logs.map(l => `
+      // ── Logs ──────────────────────────────────────────────────
+      async function loadLogs() {
+        const logs = await api("GET", "/logs");
+        const c = document.getElementById("logs-container");
+        if (!logs.length) {
+          c.innerHTML =
+            '<div style="padding:24px;color:var(--muted);text-align:center">No log entries yet</div>';
+          return;
+        }
+        c.innerHTML = logs
+          .map(
+            (l) => `
     <div class="log-entry ${l.level}">
       <span class="ts">${l.ts}</span>
       <span class="lvl">[${l.level}]</span>
       ${escHtml(l.message)}
-    </div>`).join('');
-}
+    </div>`,
+          )
+          .join("");
+      }
 
-// ── Settings ──────────────────────────────────────────────
-async function loadSettings() {
-  const cfg = await api('GET', '/config');
-  document.getElementById('s-agent-name').value = cfg.agent.name;
-  document.getElementById('s-adms-port').value  = cfg.agent.adms_port;
-  document.getElementById('s-erp-url').value    = cfg.erp.base_url;
-  document.getElementById('s-erp-token').value  = '';  // never pre-fill token
-  document.getElementById('s-interval').value   = cfg.sync.interval_seconds;
-  document.getElementById('s-batch').value      = cfg.sync.batch_size;
-}
+      // ── Settings ──────────────────────────────────────────────
+      async function loadSettings() {
+        const cfg = await api("GET", "/config");
+        document.getElementById("s-agent-name").value = cfg.agent.name;
+        document.getElementById("s-adms-port").value = cfg.agent.adms_port;
+        document.getElementById("s-web-port").value = cfg.agent.web_port;
+        document.getElementById("s-log-level").value =
+          (cfg.logging && cfg.logging.level) || "INFO";
+        document.getElementById("s-erp-url").value = cfg.erp.base_url;
+        document.getElementById("s-erp-token").value = ""; // never pre-fill token
+        document.getElementById("s-sync-mode").value = cfg.sync.sync_mode;
+        document.getElementById("s-interval").value = cfg.sync.interval_seconds;
+        document.getElementById("s-batch").value = cfg.sync.batch_size;
 
-async function saveSettings() {
-  const payload = {
-    agent_name:       document.getElementById('s-agent-name').value.trim(),
-    adms_port:        parseInt(document.getElementById('s-adms-port').value),
-    erp_base_url:     document.getElementById('s-erp-url').value.trim(),
-    erp_token:        document.getElementById('s-erp-token').value.trim(),
-    interval_seconds: parseInt(document.getElementById('s-interval').value),
-    batch_size:       parseInt(document.getElementById('s-batch').value),
-    auto_sync:        document.getElementById('auto-sync-toggle').checked,
-  };
-  // Validate numbers
-  if (isNaN(payload.adms_port) || isNaN(payload.interval_seconds) || isNaN(payload.batch_size)) {
-    toast('Please fill in all numeric fields', 'error'); return;
-  }
-  const r = await api('POST', '/config', payload);
-  if (r.ok) {
-    _autoSync = payload.auto_sync;
-    updateAutoSyncUI();
-    toast('Settings saved — restart agent for port changes to take effect', 'success');
-    document.getElementById('agent-name-display').textContent = payload.agent_name;
-  } else {
-    toast('Save failed', 'error');
-  }
-}
+        _origPorts = {
+          adms_port: cfg.agent.adms_port,
+          web_port: cfg.agent.web_port,
+          log_level: (cfg.logging && cfg.logging.level) || "INFO",
+        };
+        document.getElementById("restart-banner").style.display = "none";
+      }
 
-async function testErp() {
-  const el = document.getElementById('erp-test-result');
-  el.textContent = 'Testing…';
-  const r = await api('POST', '/config/test-erp');
-  el.textContent = r.ok ? `✓ Connected (${r.status})` : `✗ Failed: ${r.error || r.body}`;
-  el.style.color = r.ok ? 'var(--success)' : 'var(--error)';
-}
+      let _origPorts = {};
 
-// ── Modal ─────────────────────────────────────────────────
-function closeModal(id) {
-  document.getElementById(id).classList.remove('open');
-}
+      async function saveSettings() {
+        const payload = {
+          agent_name: document.getElementById("s-agent-name").value.trim(),
+          adms_port: parseInt(document.getElementById("s-adms-port").value),
+          web_port: parseInt(document.getElementById("s-web-port").value),
+          log_level: document.getElementById("s-log-level").value,
+          erp_base_url: document.getElementById("s-erp-url").value.trim(),
+          erp_token: document.getElementById("s-erp-token").value.trim(),
+          sync_mode: document.getElementById("s-sync-mode").value,
+          interval_seconds: parseInt(
+            document.getElementById("s-interval").value,
+          ),
+          batch_size: parseInt(document.getElementById("s-batch").value),
+        };
+        // Validate numbers
+        if (
+          isNaN(payload.adms_port) ||
+          isNaN(payload.web_port) ||
+          isNaN(payload.interval_seconds) ||
+          isNaN(payload.batch_size)
+        ) {
+          toast("Please fill in all numeric fields", "error");
+          return;
+        }
+        const r = await api("POST", "/config", payload);
+        if (r.ok) {
+          toast("Settings saved", "success");
+          document.getElementById("agent-name-display").textContent =
+            payload.agent_name;
 
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
-});
+          const portsChanged =
+            payload.adms_port !== _origPorts.adms_port ||
+            payload.web_port !== _origPorts.web_port ||
+            payload.log_level !== _origPorts.log_level;
 
-// ── Utils ─────────────────────────────────────────────────
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+          if (r.restart_required && portsChanged) {
+            document.getElementById("restart-banner").style.display = "";
+          }
+          loadSettings();
+        } else {
+          toast("Save failed", "error");
+        }
+      }
 
-// ── Init ──────────────────────────────────────────────────
-loadDashboard();
-</script>
-</body>
+      async function restartAgent() {
+        if (
+          !confirm(
+            "Restart the agent now? The web UI will be briefly unavailable.",
+          )
+        )
+          return;
+        toast("Restarting agent…");
+        try {
+          await api("POST", "/restart");
+        } catch (e) {
+          // connection drops as the process restarts — expected
+        }
+        // Poll until the server comes back, then reload
+        setTimeout(() => pollUntilBack(), 1000);
+      }
+
+      function pollUntilBack() {
+        fetch("/api/dashboard")
+          .then((r) => {
+            if (r.ok) {
+              location.reload();
+            } else {
+              setTimeout(pollUntilBack, 1000);
+            }
+          })
+          .catch(() => setTimeout(pollUntilBack, 1000));
+      }
+
+      async function testErp() {
+        const el = document.getElementById("erp-test-result");
+        el.textContent = "Testing…";
+        const r = await api("POST", "/config/test-erp");
+        el.textContent = r.ok
+          ? `✓ Connected (${r.status})`
+          : `✗ Failed: ${r.error || r.body}`;
+        el.style.color = r.ok ? "var(--success)" : "var(--error)";
+      }
+
+      // ── Modal ─────────────────────────────────────────────────
+      function closeModal(id) {
+        document.getElementById(id).classList.remove("open");
+      }
+
+      document.querySelectorAll(".modal-overlay").forEach((m) => {
+        m.addEventListener("click", (e) => {
+          if (e.target === m) closeModal(m.id);
+        });
+      });
+
+      // ── Utils ─────────────────────────────────────────────────
+      function escHtml(s) {
+        return String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;");
+      }
+
+      // ── Onboarding ────────────────────────────────────────────
+      async function testErpOnboarding() {
+        const url = document.getElementById("ob-erp-url").value.trim();
+        const token = document.getElementById("ob-erp-token").value.trim();
+        const el = document.getElementById("ob-erp-test-result");
+        if (!url || !token) {
+          el.textContent = "Enter URL and token first";
+          el.style.color = "var(--warn)";
+          return;
+        }
+
+        el.textContent = "Testing…";
+        el.style.color = "var(--muted)";
+        // Temporarily save so test-erp can use it
+        await api("POST", "/config", { erp_base_url: url, erp_token: token });
+        const r = await api("POST", "/config/test-erp");
+        el.textContent = r.ok
+          ? `✓ Connected (${r.status})`
+          : `✗ Failed: ${r.error || r.body}`;
+        el.style.color = r.ok ? "var(--success)" : "var(--error)";
+      }
+
+      async function finishOnboarding() {
+        const payload = {
+          agent_name: document.getElementById("ob-agent-name").value.trim(),
+          erp_base_url: document.getElementById("ob-erp-url").value.trim(),
+          erp_token: document.getElementById("ob-erp-token").value.trim(),
+          sync_mode: document.getElementById("ob-sync-mode").value,
+        };
+        if (!payload.erp_base_url || !payload.erp_token) {
+          toast("ERP base URL and token are required", "error");
+          return;
+        }
+        const r = await api("POST", "/onboarding", payload);
+        if (r.ok) {
+          toast("Setup complete!", "success");
+          showApp();
+        } else {
+          toast(r.error || "Setup failed", "error");
+        }
+      }
+
+      function showOnboarding() {
+        document.getElementById("onboarding-overlay").style.display = "";
+        document.getElementById("app-shell").style.display = "none";
+      }
+
+      function showApp() {
+        document.getElementById("onboarding-overlay").style.display = "none";
+        document.getElementById("app-shell").style.display = "";
+        loadDashboard();
+      }
+
+      // ── Init ──────────────────────────────────────────────────
+      (async function init() {
+        try {
+          const status = await api("GET", "/onboarding/status");
+          if (status.onboarding_complete) {
+            showApp();
+          } else {
+            showOnboarding();
+          }
+        } catch (e) {
+          showApp();
+        }
+      })();
+    </script>
+  </body>
 </html>

@@ -34,7 +34,7 @@ def _connect(device: dict):
 def check_status(device: dict) -> dict:
     try:
         zk, conn = _connect(device)
-        info = {
+        info = {        
             "connected": True,
             "firmware":  conn.get_firmware_version(),
             "serial":    conn.get_serialnumber(),

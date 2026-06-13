@@ -4,73 +4,92 @@ REST API endpoints for the web UI.
 """
 import json
 import logging
-from pathlib import Path
+import os
+import sys
+import threading
 from flask import Blueprint, jsonify, request
+
+from core.config import load_file_config, save_file_config, get_full_config
 
 log = logging.getLogger("zk_agent")
 api_bp = Blueprint("api", __name__)
-
-CONFIG_PATH = Path(__file__).parent.parent / "config.json"
-
-
-def _load_cfg() -> dict:
-    with open(CONFIG_PATH) as f:
-        return json.load(f)
-
-
-def _save_cfg(cfg: dict):
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(cfg, f, indent=2)
 
 
 # ── Config ────────────────────────────────────────────────
 
 @api_bp.get("/config")
 def get_config():
-    cfg = _load_cfg()
+    cfg = get_full_config()
     # Mask token for display
     safe = json.loads(json.dumps(cfg))
     token = safe["erp"].get("token", "")
-    if token and token != "your-agent-token-here":
-        safe["erp"]["token"] = token[:6] + "…" + token[-4:]
+    if token:
+        safe["erp"]["token"] = token[:6] + "…" + token[-4:] if len(token) > 10 else "••••••"
     return jsonify(safe)
 
 
 @api_bp.post("/config")
 def save_config():
+    from core.database import set_config_section
     data = request.json or {}
-    cfg  = _load_cfg()
 
-    # Agent settings
+    # ── config.json: agent name, ports, logging ──
+    file_cfg = load_file_config()
+    file_changed = False
+
     if "agent_name" in data:
-        cfg["agent"]["name"] = data["agent_name"]
+        file_cfg["agent"]["name"] = data["agent_name"]
+        file_changed = True
     if "adms_port" in data:
-        cfg["agent"]["adms_port"] = int(data["adms_port"])
+        file_cfg["agent"]["adms_port"] = int(data["adms_port"])
+        file_changed = True
     if "web_port" in data:
-        cfg["agent"]["web_port"] = int(data["web_port"])
+        file_cfg["agent"]["web_port"] = int(data["web_port"])
+        file_changed = True
+    if "log_level" in data:
+        file_cfg.setdefault("logging", {})["level"] = data["log_level"]
+        file_changed = True
 
-    # ERP settings
+    if file_changed:
+        save_file_config(file_cfg)
+
+    # ── DB-backed config: ERP, sync, enrollment ──
+    db_section = {}
+
+    erp = {}
     if "erp_base_url" in data:
-        cfg["erp"]["base_url"] = data["erp_base_url"].rstrip("/")
+        erp["base_url"] = data["erp_base_url"].rstrip("/")
     if "erp_token" in data and data["erp_token"] and "…" not in data["erp_token"]:
-        cfg["erp"]["token"] = data["erp_token"]
+        erp["token"] = data["erp_token"]
+    if "erp_name" in data:
+        erp["name"] = data["erp_name"]
+    if erp:
+        db_section["erp"] = erp
 
-    # Sync settings
-    if "sync_mode" in data:
-        if data["sync_mode"] in ("manual", "timely", "realtime"):
-            cfg["sync"]["sync_mode"] = data["sync_mode"]
+    sync = {}
+    if "sync_mode" in data and data["sync_mode"] in ("manual", "timely", "realtime"):
+        sync["sync_mode"] = data["sync_mode"]
     if "interval_seconds" in data:
-        cfg["sync"]["interval_seconds"] = int(data["interval_seconds"])
+        sync["interval_seconds"] = int(data["interval_seconds"])
     if "batch_size" in data:
-        cfg["sync"]["batch_size"] = int(data["batch_size"])
+        sync["batch_size"] = int(data["batch_size"])
+    if "auto_sync" in data:
+        sync["auto_sync"] = bool(data["auto_sync"])
+    if sync:
+        db_section["sync"] = sync
 
-    _save_cfg(cfg)
-    return jsonify({"ok": True})
+    if db_section:
+        set_config_section(db_section)
+
+    return jsonify({
+        "ok": True,
+        "restart_required": file_changed,
+    })
 
 
 @api_bp.post("/config/test-erp")
 def test_erp():
-    cfg = _load_cfg()
+    cfg = get_full_config()
     import requests as req
     url = cfg["erp"]["base_url"].rstrip("/") + cfg["erp"]["endpoints"]["heartbeat"]
     try:
@@ -81,6 +100,57 @@ def test_erp():
         return jsonify({"ok": r.ok, "status": r.status_code, "body": r.text[:200]})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)})
+
+
+# ── Onboarding ────────────────────────────────────────────
+
+@api_bp.get("/onboarding/status")
+def onboarding_status():
+    from core.database import is_onboarding_complete
+    return jsonify({"onboarding_complete": is_onboarding_complete()})
+
+
+@api_bp.post("/onboarding")
+def complete_onboarding():
+    """
+    Save initial setup from the onboarding wizard:
+    agent name, ERP URL/token, sync mode — then mark onboarding complete.
+    """
+    from core.database import set_config_section
+    data = request.json or {}
+
+    # config.json: agent name (ports/logging keep their defaults)
+    if "agent_name" in data:
+        file_cfg = load_file_config()
+        file_cfg["agent"]["name"] = data["agent_name"]
+        save_file_config(file_cfg)
+
+    erp_base_url = (data.get("erp_base_url") or "").rstrip("/")
+    erp_token    = data.get("erp_token") or ""
+
+    if not erp_base_url or not erp_token:
+        return jsonify({"error": "ERP base URL and token are required"}), 400
+
+    set_config_section({
+        "erp": {"base_url": erp_base_url, "token": erp_token},
+        "sync": {"sync_mode": data.get("sync_mode", "timely")},
+        "onboarding_complete": True,
+    })
+    return jsonify({"ok": True})
+
+
+# ── Restart ───────────────────────────────────────────────
+
+@api_bp.post("/restart")
+def restart_agent():
+    """Restart the whole agent process so config.json changes take effect."""
+    def _do_restart():
+        import time
+        time.sleep(0.5)  # give time for response to flush
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    threading.Thread(target=_do_restart, daemon=True).start()
+    return jsonify({"ok": True, "message": "Restarting…"})
 
 
 # ── Devices ───────────────────────────────────────────────
@@ -199,7 +269,7 @@ def get_attendance():
 
 @api_bp.post("/sync")
 def trigger_sync():
-    cfg = _load_cfg()
+    cfg = get_full_config()
     from core.erp_sync import full_sync
     try:
         result = full_sync(cfg)
@@ -210,10 +280,11 @@ def trigger_sync():
 
 @api_bp.post("/sync/toggle")
 def toggle_auto_sync():
-    cfg = _load_cfg()
-    cfg["sync"]["auto_sync"] = not cfg["sync"].get("auto_sync", False)
-    _save_cfg(cfg)
-    return jsonify({"auto_sync": cfg["sync"]["auto_sync"]})
+    from core.database import get_config_value, set_config_value
+    current = get_config_value("sync.auto_sync", "false").lower() == "true"
+    new_val = not current
+    set_config_value("sync.auto_sync", str(new_val).lower())
+    return jsonify({"auto_sync": new_val})
 
 
 @api_bp.get("/sync/history")
@@ -238,7 +309,7 @@ def get_logs():
 
 @api_bp.get("/sync/mode")
 def get_sync_mode():
-    cfg = _load_cfg()
+    cfg = get_full_config()
     return jsonify({
         "sync_mode":        cfg["sync"].get("sync_mode", "timely"),
         "interval_seconds": cfg["sync"].get("interval_seconds", 60),
@@ -247,15 +318,15 @@ def get_sync_mode():
 
 @api_bp.post("/sync/mode")
 def set_sync_mode():
+    from core.database import set_config_section
     data = request.json or {}
     mode = data.get("sync_mode")
     if mode not in ("manual", "timely", "realtime"):
         return jsonify({"error": "sync_mode must be: manual | timely | realtime"}), 400
-    cfg = _load_cfg()
-    cfg["sync"]["sync_mode"] = mode
+    sync = {"sync_mode": mode}
     if "interval_seconds" in data:
-        cfg["sync"]["interval_seconds"] = int(data["interval_seconds"])
-    _save_cfg(cfg)
+        sync["interval_seconds"] = int(data["interval_seconds"])
+    set_config_section({"sync": sync})
     return jsonify({"ok": True, "sync_mode": mode})
 
 
@@ -263,7 +334,7 @@ def set_sync_mode():
 
 @api_bp.get("/enrollment/devices")
 def get_enrollment_devices():
-    cfg = _load_cfg()
+    cfg = get_full_config()
     from core.database import get_devices
     enrollment_ids = cfg.get("enrollment", {}).get("device_ids", [])
     all_devices    = get_devices()
@@ -276,6 +347,7 @@ def get_enrollment_devices():
 @api_bp.post("/enrollment/devices")
 def set_enrollment_devices():
     """Set which device IDs are used for fingerprint enrollment."""
+    from core.database import set_config_section
     data = request.json or {}
     device_ids = data.get("device_ids", [])
     if not isinstance(device_ids, list):
@@ -286,12 +358,9 @@ def set_enrollment_devices():
         if not get_device(int(did)):
             return jsonify({"error": f"Device id={did} not found"}), 404
 
-    cfg = _load_cfg()
-    if "enrollment" not in cfg:
-        cfg["enrollment"] = {}
-    cfg["enrollment"]["device_ids"] = [int(i) for i in device_ids]
-    _save_cfg(cfg)
-    return jsonify({"ok": True, "device_ids": cfg["enrollment"]["device_ids"]})
+    ids = [int(i) for i in device_ids]
+    set_config_section({"enrollment": {"device_ids": ids}})
+    return jsonify({"ok": True, "device_ids": ids})
 
 
 @api_bp.get("/dashboard")
@@ -299,7 +368,7 @@ def dashboard():
     from core.database import (
         get_devices, get_attendance_stats, get_sync_history, get_logs
     )
-    cfg     = _load_cfg()
+    cfg     = get_full_config()
     devices = get_devices()
     stats   = get_attendance_stats()
     history = get_sync_history(5)

@@ -71,8 +71,123 @@ def init_db():
             level       TEXT DEFAULT 'INFO',
             message     TEXT NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS config (
+            key         TEXT PRIMARY KEY,
+            value       TEXT
+        );
     """)
     conn.commit()
+    _seed_config_defaults()
+
+
+# ── Config (key-value store) ──────────────────────────────
+
+# Defaults for everything that used to live under config.json's
+# "erp", "sync", and "enrollment" sections, plus onboarding state.
+_CONFIG_DEFAULTS = {
+    "erp.name":                "BetterSchool ERP",
+    "erp.base_url":            "",
+    "erp.token":               "",
+    "erp.endpoints.push_attendance": "/biometric/agent/attendance",
+    "erp.endpoints.pull_commands":   "/biometric/agent/commands/pending",
+    "erp.endpoints.ack_command":     "/biometric/agent/commands/{id}/ack",
+    "erp.endpoints.heartbeat":        "/biometric/agent/heartbeat",
+    "sync.sync_mode":          "timely",
+    "sync.interval_seconds":   "10",
+    "sync.batch_size":         "100",
+    "sync.auto_sync":          "false",
+    "enrollment.device_ids":   "[]",
+    "onboarding_complete":     "false",
+}
+
+
+def _seed_config_defaults():
+    conn = get_conn()
+    for key, value in _CONFIG_DEFAULTS.items():
+        conn.execute(
+            "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)", (key, value))
+    conn.commit()
+
+
+def get_config_value(key: str, default=None):
+    conn = get_conn()
+    row = conn.execute("SELECT value FROM config WHERE key=?", (key,)).fetchone()
+    if row is None:
+        return default
+    return row["value"]
+
+
+def set_config_value(key: str, value):
+    conn = get_conn()
+    conn.execute(
+        "INSERT INTO config (key, value) VALUES (?, ?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, str(value)))
+    conn.commit()
+
+
+def get_config_all() -> dict:
+    """Return the full DB-backed config as a nested dict (erp/sync/enrollment/onboarding)."""
+    import json as _json
+    conn = get_conn()
+    rows = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM config").fetchall()}
+
+    def _get(key, default=""):
+        return rows.get(key, _CONFIG_DEFAULTS.get(key, default))
+
+    return {
+        "erp": {
+            "name":     _get("erp.name"),
+            "base_url": _get("erp.base_url"),
+            "token":    _get("erp.token"),
+            "endpoints": {
+                "push_attendance": _get("erp.endpoints.push_attendance"),
+                "pull_commands":   _get("erp.endpoints.pull_commands"),
+                "ack_command":     _get("erp.endpoints.ack_command"),
+                "heartbeat":       _get("erp.endpoints.heartbeat"),
+            },
+        },
+        "sync": {
+            "sync_mode":        _get("sync.sync_mode"),
+            "interval_seconds": int(_get("sync.interval_seconds", "10")),
+            "batch_size":       int(_get("sync.batch_size", "100")),
+            "auto_sync":        _get("sync.auto_sync", "false").lower() == "true",
+        },
+        "enrollment": {
+            "device_ids": _json.loads(_get("enrollment.device_ids", "[]")),
+        },
+        "onboarding_complete": _get("onboarding_complete", "false").lower() == "true",
+    }
+
+
+def is_onboarding_complete() -> bool:
+    return get_config_value("onboarding_complete", "false").lower() == "true"
+
+
+def set_config_section(section: dict):
+    """Bulk-update DB config from a nested dict shaped like get_config_all()'s output."""
+    import json as _json
+    if "erp" in section:
+        erp = section["erp"]
+        if "name" in erp:     set_config_value("erp.name", erp["name"])
+        if "base_url" in erp: set_config_value("erp.base_url", erp["base_url"])
+        if "token" in erp:    set_config_value("erp.token", erp["token"])
+        endpoints = erp.get("endpoints", {})
+        for k, v in endpoints.items():
+            set_config_value(f"erp.endpoints.{k}", v)
+    if "sync" in section:
+        sync = section["sync"]
+        if "sync_mode" in sync:        set_config_value("sync.sync_mode", sync["sync_mode"])
+        if "interval_seconds" in sync: set_config_value("sync.interval_seconds", sync["interval_seconds"])
+        if "batch_size" in sync:       set_config_value("sync.batch_size", sync["batch_size"])
+        if "auto_sync" in sync:        set_config_value("sync.auto_sync", str(bool(sync["auto_sync"])).lower())
+    if "enrollment" in section:
+        enr = section["enrollment"]
+        if "device_ids" in enr:
+            set_config_value("enrollment.device_ids", _json.dumps(enr["device_ids"]))
+    if "onboarding_complete" in section:
+        set_config_value("onboarding_complete", str(bool(section["onboarding_complete"])).lower())
 
 
 # ── Devices ───────────────────────────────────────────────

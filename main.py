@@ -3,27 +3,17 @@ main.py
 Entry point — initialises DB, starts ADMS server, web UI, and scheduler.
 Run: python main.py
 """
-import json
 import logging
 import logging.handlers
-import os
-import sys
 from pathlib import Path
 
+from core.config import load_file_config, get_full_config
+
 BASE_DIR = Path(__file__).parent
-CONFIG_PATH = BASE_DIR / "config.json"
 
 
-def load_config() -> dict:
-    if not CONFIG_PATH.exists():
-        print("config.json not found. Copy config.example.json and fill in your details.")
-        sys.exit(1)
-    with open(CONFIG_PATH) as f:
-        return json.load(f)
-
-
-def setup_logging(cfg: dict):
-    log_cfg = cfg.get("logging", {})
+def setup_logging(file_cfg: dict):
+    log_cfg = file_cfg.get("logging", {})
     level   = getattr(logging, log_cfg.get("level", "INFO").upper(), logging.INFO)
     fmt     = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                                 datefmt="%Y-%m-%d %H:%M:%S")
@@ -52,18 +42,22 @@ def setup_logging(cfg: dict):
 
 
 def main():
-    cfg = load_config()
-    setup_logging(cfg)
+    # config.json (agent name, ports, logging) — created with defaults if missing
+    file_cfg = load_file_config()
+    setup_logging(file_cfg)
     log = logging.getLogger("zk_agent")
 
     log.info("=" * 50)
-    log.info(f"Starting {cfg['agent']['name']}")
+    log.info(f"Starting {file_cfg['agent']['name']}")
     log.info("=" * 50)
 
-    # Init database
+    # Init database (also seeds DB-backed config defaults)
     from core.database import init_db
     init_db()
     log.info("Database initialised")
+
+    # Merged config: agent/logging from config.json + erp/sync/enrollment from DB
+    cfg = get_full_config()
 
     # Start ADMS receiver
     from core.adms_server import start_adms_server

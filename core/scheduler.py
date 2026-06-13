@@ -24,11 +24,9 @@ def _loop(cfg: dict):
 
     while not _stop_event.is_set():
         # Re-read config on each tick (so UI changes take effect without restart)
-        import json
-        from pathlib import Path
         try:
-            with open(Path(__file__).parent.parent / "config.json") as f:
-                live_cfg = json.load(f)
+            from core.config import get_full_config
+            live_cfg = get_full_config()
         except Exception:
             live_cfg = cfg
 

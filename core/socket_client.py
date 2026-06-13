@@ -14,21 +14,18 @@ Events emitted to ERP:
   enrollment_synced   → template synced to all devices
   enrollment_error    → something went wrong during enroll or sync
 """
-import json
 import logging
 import threading
-from pathlib import Path
 
 log = logging.getLogger("zk_agent")
 
 _client_thread = None
 _sio = None
-_cfg_path = Path(__file__).parent.parent / "config.json"
 
 
 def _load_cfg() -> dict:
-    with open(_cfg_path) as f:
-        return json.load(f)
+    from core.config import get_full_config
+    return get_full_config()
 
 
 # ── Enrollment helpers ────────────────────────────────────

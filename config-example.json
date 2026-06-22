@@ -9,10 +9,10 @@
     "base_url": "http://localhost:7654",
     "token": "bWFucGFuZQ==.0847305e2067c8b7c1feab3caf0fe83d3d4694c8",
     "endpoints": {
-      "push_attendance": "/api/biometric/agent/attendance",
-      "pull_commands": "/api/biometric/agent/commands/pending",
-      "ack_command": "/api/biometric/agent/commands/{id}/ack",
-      "heartbeat": "/api/biometric/agent/heartbeat"
+      "push_attendance": "/biometric/agent/attendance",
+      "pull_commands": "/biometric/agent/commands/pending",
+      "ack_command": "/biometric/agent/commands/{id}/ack",
+      "heartbeat": "/biometric/agent/heartbeat"
     }
   },
   "sync": {

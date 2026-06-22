@@ -19,6 +19,10 @@ import threading
 
 log = logging.getLogger("zk_agent")
 
+# Biometric realtime lives on its own namespace on the ERP so it never collides
+# with the ERP's order/notification sockets on "/".
+NS = "/biometric"
+
 _client_thread = None
 _sio = None
 
@@ -106,7 +110,7 @@ def _handle_enroll_user(data: dict):
                 _sio.emit("enrollment_error", {
                     "user_id": user_id,
                     "error": "No enrollment devices configured on agent."
-                })
+                }, namespace=NS)
             return
 
         triggered = []
@@ -149,12 +153,12 @@ def _handle_enroll_user(data: dict):
                     "user_id":  user_id,
                     "devices":  triggered,
                     "message":  f"Enrollment triggered on: {', '.join(triggered)}. Ask user to place finger on device.",
-                })
+                }, namespace=NS)
             else:
                 _sio.emit("enrollment_error", {
                     "user_id": user_id,
                     "error":   "; ".join(errors) or "Unknown error",
-                })
+                }, namespace=NS)
 
     threading.Thread(target=_run, daemon=True, name="ws-enroll").start()
 
@@ -183,7 +187,7 @@ def _handle_complete_enrollment(data: dict):
                 _sio.emit("enrollment_error", {
                     "user_id": user_id,
                     "error":   "No enrollment devices configured on agent."
-                })
+                }, namespace=NS)
             return
 
         # ── Step 1: Download template from enrollment device ──
@@ -220,7 +224,7 @@ def _handle_complete_enrollment(data: dict):
                 _sio.emit("enrollment_error", {
                     "user_id": user_id,
                     "error":   "No fingerprint template found on enrollment device. Has the user enrolled their finger?"
-                })
+                }, namespace=NS)
             return
 
         # ── Step 2: Upload template to all other SDK devices ──
@@ -270,7 +274,7 @@ def _handle_complete_enrollment(data: dict):
                 "errors":         errors,
                 "message":        f"Template synced to {len(synced)} device(s)."
                                   + (f" Errors: {'; '.join(errors)}" if errors else ""),
-            })
+            }, namespace=NS)
 
         db_log("INFO",
             f"[WS] complete_enrollment done — synced={synced} errors={errors}")
@@ -304,35 +308,35 @@ def _start_client(cfg: dict):
         engineio_logger=False,
     )
 
-    @_sio.event
+    @_sio.on("connect", namespace=NS)
     def connect():
-        db_log("INFO", f"[WS] Connected to ERP at {ws_url}")
+        db_log("INFO", f"[WS] Connected to ERP at {ws_url}{NS}")
         # Authenticate as biometric agent using the same token format
-        _sio.emit("authenticate-biometricagent", token)
+        _sio.emit("authenticate-biometricagent", token, namespace=NS)
 
-    @_sio.event
+    @_sio.on("disconnect", namespace=NS)
     def disconnect():
         db_log("WARN", "[WS] Disconnected from ERP — will reconnect automatically")
 
-    @_sio.event
+    @_sio.on("connect_error", namespace=NS)
     def connect_error(data):
         db_log("ERROR", f"[WS] Connection error: {data}")
 
-    @_sio.on("sync")
+    @_sio.on("sync", namespace=NS)
     def on_sync(data=None):
         _handle_sync(data)
 
-    @_sio.on("enroll_user")
+    @_sio.on("enroll_user", namespace=NS)
     def on_enroll_user(data):
         _handle_enroll_user(data)
 
-    @_sio.on("complete_enrollment")
+    @_sio.on("complete_enrollment", namespace=NS)
     def on_complete_enrollment(data):
         _handle_complete_enrollment(data)
 
     try:
-        db_log("INFO", f"[WS] Connecting to ERP at {ws_url}")
-        _sio.connect(ws_url, transports=["websocket"])
+        db_log("INFO", f"[WS] Connecting to ERP at {ws_url}{NS}")
+        _sio.connect(ws_url, transports=["websocket"], namespaces=[NS])
         _sio.wait()  # blocks thread until disconnect + all retries exhausted
     except Exception as e:
         db_log("ERROR", f"[WS] Socket client error: {e}")
@@ -359,6 +363,6 @@ def stop_socket_client():
 def emit_to_erp(event: str, data: dict):
     """Utility — emit an event to ERP from anywhere in the codebase."""
     if _sio and _sio.connected:
-        _sio.emit(event, data)
+        _sio.emit(event, data, namespace=NS)
     else:
         log.warning(f"[WS] emit_to_erp: not connected, dropping event '{event}'")
